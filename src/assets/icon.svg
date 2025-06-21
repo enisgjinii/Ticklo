@@ -1,0 +1,14 @@
+
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0099cc;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#gradient)" />
+  <circle cx="256" cy="200" r="80" fill="none" stroke="white" stroke-width="20" />
+  <line x1="256" y1="200" x2="256" y2="120" stroke="white" stroke-width="12" stroke-linecap="round" />
+  <line x1="256" y1="200" x2="320" y2="240" stroke="white" stroke-width="12" stroke-linecap="round" />
+  <text x="256" y="380" text-anchor="middle" fill="white" font-size="48" font-family="Arial, sans-serif" font-weight="bold">TICKLO</text>
+</svg>

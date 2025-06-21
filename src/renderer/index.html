@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticklo - Activity Tracker</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="d-flex">
+    <!-- Modern Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-content">
+            <!-- Logo Section -->
+            <div class="sidebar-header">
+                <div class="logo-wrapper">
+                    <div class="logo-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <span class="logo-text">Ticklo</span>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+
+            <!-- Tracking Toggle -->
+            <div class="tracking-section">
+                <div class="tracking-card">
+                    <div class="tracking-header">
+                        <span class="tracking-label">Time Tracking</span>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="trackingToggle" checked>
+                        </div>
+                    </div>
+                    <div class="tracking-status">
+                        <div class="status-indicator active"></div>
+                        <span class="status-text">Currently tracking</span>
+                    </div>
+                    <div class="tracking-time">
+                        <i class="far fa-clock me-2"></i>
+                        <span id="currentSessionTime">0h 0m</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <ul class="nav-list">
+                        <li>
+                            <a href="#" class="nav-link active" data-page="dashboard">
+                                <i class="fas fa-th-large"></i>
+                                <span class="nav-text">Dashboard</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="nav-link" data-page="timeline">
+                                <i class="fas fa-stream"></i>
+                                <span class="nav-text">Timeline</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="nav-link" data-page="analytics">
+                                <i class="fas fa-chart-bar"></i>
+                                <span class="nav-text">Analytics</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Manage</div>
+                    <ul class="nav-list">
+                        <li>
+                            <a href="#" class="nav-link" data-page="activities">
+                                <i class="fas fa-list-check"></i>
+                                <span class="nav-text">Activities</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="nav-link" data-page="categories">
+                                <i class="fas fa-tags"></i>
+                                <span class="nav-text">Categories</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="nav-link" data-page="settings">
+                                <i class="fas fa-cog"></i>
+                                <span class="nav-text">Settings</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button class="action-btn" id="addActivityBtn" aria-label="Add activity">
+                    <i class="fas fa-plus"></i>
+                    <span class="action-text">Add Activity</span>
+                </button>
+                <button class="action-btn secondary" id="exportDataBtn" aria-label="Export data">
+                    <i class="fas fa-download"></i>
+                    <span class="action-text">Export</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+            <div class="theme-selector">
+                <button class="theme-toggle" id="darkModeToggle" aria-label="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <span class="theme-label">Theme</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content" id="mainContent">
+        <!-- Dashboard Page -->
+        <div class="page active" id="dashboardPage">
+            <div class="page-container">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h1>Dashboard</h1>
+                        <p class="page-subtitle">Track your productivity and time usage</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="btn-icon" id="refreshBtn" aria-label="Refresh">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <div class="date-display">
+                            <i class="far fa-calendar me-2"></i>
+                            <span id="currentDate">Today</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="page-content">
+                    <!-- Stats Grid -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div class="stat-icon primary">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <span class="stat-label">Total Time</span>
+                            </div>
+                            <div class="stat-value" id="totalTime">0h 0m</div>
+                            <div class="stat-change">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>12% from yesterday</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div class="stat-icon success">
+                                    <i class="fas fa-code"></i>
+                                </div>
+                                <span class="stat-label">Productive</span>
+                            </div>
+                            <div class="stat-value" id="productiveTime">0h 0m</div>
+                            <div class="stat-progress">
+                                <div class="progress-bar" id="productiveProgress"></div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div class="stat-icon warning">
+                                    <i class="fas fa-coffee"></i>
+                                </div>
+                                <span class="stat-label">Break Time</span>
+                            </div>
+                            <div class="stat-value" id="breakTime">0h 0m</div>
+                            <div class="stat-progress">
+                                <div class="progress-bar warning" id="breakProgress"></div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div class="stat-icon danger">
+                                    <i class="fas fa-mobile-alt"></i>
+                                </div>
+                                <span class="stat-label">Distracted</span>
+                            </div>
+                            <div class="stat-value" id="distractedTime">0h 0m</div>
+                            <div class="stat-progress">
+                                <div class="progress-bar danger" id="distractedProgress"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Overview -->
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <div class="card-header">
+                                <h3>Today's Activities</h3>
+                                <button class="btn-text" id="viewAllActivities">View all</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="activity-list" id="todayActivities">
+                                    <!-- Activities will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="content-card">
+                            <div class="card-header">
+                                <h3>Top Applications</h3>
+                                <div class="time-filter">
+                                    <button class="filter-btn active">Today</button>
+                                    <button class="filter-btn">Week</button>
+                                    <button class="filter-btn">Month</button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="app-list" id="topApplications">
+                                    <!-- Apps will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Goal Progress -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3>Daily Goal Progress</h3>
+                            <span class="goal-target">Target: <span id="dailyGoalTarget">8h</span></span>
+                        </div>
+                        <div class="card-body">
+                            <div class="goal-progress">
+                                <div class="circular-progress">
+                                    <svg viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="45" class="progress-bg"></circle>
+                                        <circle cx="50" cy="50" r="45" class="progress-fill" id="goalProgress"></circle>
+                                    </svg>
+                                    <div class="progress-text">
+                                        <span class="progress-value" id="goalPercentage">0%</span>
+                                        <span class="progress-label">Complete</span>
+                                    </div>
+                                </div>
+                                <div class="goal-stats">
+                                    <div class="goal-stat">
+                                        <span class="stat-label">Productive Time</span>
+                                        <span class="stat-value" id="goalProductiveTime">0h 0m</span>
+                                    </div>
+                                    <div class="goal-stat">
+                                        <span class="stat-label">Remaining</span>
+                                        <span class="stat-value" id="goalRemaining">8h 0m</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline Page -->
+        <div class="page" id="timelinePage">
+            <div class="page-container">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h1>Timeline</h1>
+                        <p class="page-subtitle">Visual representation of your day</p>
+                    </div>
+                    <div class="page-actions">
+                        <div class="view-toggle">
+                            <button class="toggle-btn active" data-view="day">Day</button>
+                            <button class="toggle-btn" data-view="week">Week</button>
+                            <button class="toggle-btn" data-view="month">Month</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="page-content">
+                    <div class="timeline-container">
+                        <div class="timeline-header">
+                            <div class="time-labels" id="timeLabels">
+                                <!-- Time labels will be generated -->
+                            </div>
+                        </div>
+                        <div class="timeline-body" id="timelineBody">
+                            <!-- Timeline tracks will be generated -->
+                        </div>
+                        <div class="timeline-current-time" id="currentTimeLine"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div class="page" id="analyticsPage">
+            <div class="page-container">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h1>Analytics</h1>
+                        <p class="page-subtitle">Insights and productivity trends</p>
+                    </div>
+                </div>
+                <div class="page-content">
+                    <!-- Analytics content will be populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Activities Page -->
+        <div class="page" id="activitiesPage">
+            <div class="page-container">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h1>Activities</h1>
+                        <p class="page-subtitle">Manage your tracked activities</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="btn-primary" id="addManualActivity">
+                            <i class="fas fa-plus me-2"></i>
+                            Add Activity
+                        </button>
+                    </div>
+                </div>
+
+                <div class="page-content">
+                    <div class="content-card">
+                        <div class="card-header">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" placeholder="Search activities..." id="activitySearch">
+                            </div>
+                            <div class="filter-options">
+                                <select class="filter-select" id="categoryFilter">
+                                    <option value="">All Categories</option>
+                                </select>
+                                <select class="filter-select" id="dateFilter">
+                                    <option value="today">Today</option>
+                                    <option value="week">This Week</option>
+                                    <option value="month">This Month</option>
+                                    <option value="all">All Time</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="activities-table" id="activitiesTable">
+                                <!-- Activities table will be populated -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories Page -->
+        <div class="page" id="categoriesPage">
+            <div class="page-container">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h1>Categories</h1>
+                        <p class="page-subtitle">Manage app categorization</p>
+                    </div>
+                </div>
+                <div class="page-content">
+                    <!-- Categories content will be populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div class="page" id="settingsPage">
+            <div class="page-container">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h1>Settings</h1>
+                        <p class="page-subtitle">Configure your preferences</p>
+                    </div>
+                </div>
+
+                <div class="page-content">
+                    <div class="settings-grid">
+                        <div class="settings-section">
+                            <h3>General</h3>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Auto-start tracking</span>
+                                    <span class="setting-description">Start tracking when app launches</span>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="autoStart" aria-label="Auto start with system" checked>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Minimize to tray</span>
+                                    <span class="setting-description">Keep running in system tray</span>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="minimizeToTray" aria-label="Minimize to tray" checked>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Show notifications</span>
+                                    <span class="setting-description">Display break reminders and alerts</span>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="showNotifications" aria-label="Show notifications" checked>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Auto categorization</span>
+                                    <span class="setting-description">Automatically categorize applications using AI</span>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="autoCategory" aria-label="Auto categorization" checked>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Goals</h3>
+                            <div class="setting-item">
+                                <label class="setting-label">Daily productivity goal</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="dailyGoal" value="8" min="1" max="24" aria-label="Daily goal hours">
+                                    <span class="input-suffix">hours</span>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label class="setting-label">Break reminder interval</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="breakReminder" value="60" min="15" max="180" aria-label="Break reminder minutes">
+                                    <span class="input-suffix">minutes</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Data</h3>
+                            <div class="setting-item">
+                                <button class="btn-secondary" id="exportSettings">
+                                    <i class="fas fa-download me-2"></i>
+                                    Export Settings
+                                </button>
+                                <button class="btn-secondary" id="importSettings">
+                                    <i class="fas fa-upload me-2"></i>
+                                    Import Settings
+                                </button>
+                            </div>
+                            <div class="setting-item">
+                                <button class="btn-danger" id="clearData">
+                                    <i class="fas fa-trash me-2"></i>
+                                    Clear All Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Debug Console -->
+        <div class="debug-console" id="debugConsole">
+            <div class="console-header">
+                <span>Debug Console</span>
+                <button class="console-toggle" id="consoleToggle">
+                    <i class="fas fa-terminal"></i>
+                </button>
+            </div>
+            <div class="console-body" id="consoleBody">
+                <pre id="debugOutput"></pre>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Activity Modal -->
+    <div class="modal fade" id="addActivityModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Manual Activity</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addActivityForm">
+                        <div class="form-group">
+                            <label for="activityApp">Application</label>
+                            <input type="text" class="form-control" id="activityApp" name="app" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="activityTitle">Activity Title</label>
+                            <input type="text" class="form-control" id="activityTitle" name="title" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="activityCategory">Category</label>
+                            <select class="form-control" id="activityCategory" name="category" required>
+                                <option value="productive">Productive</option>
+                                <option value="break">Break</option>
+                                <option value="distracted">Distracted</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="activityStartTime">Start Time</label>
+                            <input type="datetime-local" class="form-control" id="activityStartTime" name="startTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="activityDuration">Duration (minutes)</label>
+                            <input type="number" class="form-control" id="activityDuration" name="duration" min="1" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="addActivityForm" class="btn-primary">Add Activity</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Renderer Script -->
+    <script src="renderer.js"></script>
+</body>
+</html> 

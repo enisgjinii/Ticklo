@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticklo - Time Tracker</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar will be loaded here -->
+        <div id="sidebarContainer"></div>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="mainContent">
+            <!-- Page content will be loaded dynamically -->
+            <div id="pageContainer"></div>
+        </main>
+
+        <!-- Debug Console -->
+        <div class="debug-console" id="debugConsole">
+            <div class="console-header">
+                <span>Debug Console</span>
+                <button class="console-toggle" id="consoleToggle">
+                    <i class="fas fa-terminal"></i>
+                </button>
+            </div>
+            <div class="console-body" id="consoleBody">
+                <pre id="debugOutput"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modalContainer"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="loading-text">Loading components...</div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Component Loader -->
+    <script src="component-loader.js"></script>
+    
+    <!-- Modal Manager -->
+    <script src="modal-manager.js"></script>
+    
+    <!-- Auto Categorizer -->
+    <script src="auto-categorizer.js"></script>
+    
+    <!-- Renderer Script -->
+    <script src="renderer.js"></script>
+
+    <script>
+        // Initialize the app with component loading
+        document.addEventListener('DOMContentLoaded', async function() {
+            const loader = window.ComponentLoader;
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            try {
+                // Show loading
+                loadingOverlay.style.display = 'flex';
+                
+                // Set components path
+                loader.setComponentsPath('./components/');
+                
+                // Preload essential components
+                console.log('🚀 Starting modular app initialization...');
+                
+                // Load sidebar
+                await loader.include('sidebar', '#sidebarContainer');
+                
+                // Load default page (dashboard)
+                await loader.include('dashboard', '#pageContainer');
+                
+                // Preload other components for faster navigation
+                const componentsToPreload = ['settings', 'timeline', 'analytics', 'activities', 'categories'];
+                await loader.preloadComponents(componentsToPreload);
+                
+                console.log('✅ All components loaded successfully!');
+                
+                // Initialize app functionality
+                if (typeof initializeApp === 'function') {
+                    initializeApp();
+                }
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize modular app:', error);
+                
+                // Fallback: show error message
+                document.getElementById('pageContainer').innerHTML = `
+                    <div class="error-container">
+                        <div class="alert alert-danger">
+                            <h4>Failed to Load Components</h4>
+                            <p>The application failed to load properly. Please refresh the page.</p>
+                            <button class="btn btn-primary" onclick="location.reload()">Refresh</button>
+                        </div>
+                    </div>
+                `;
+                
+            } finally {
+                // Hide loading
+                loadingOverlay.style.display = 'none';
+            }
+        });
+
+        // Navigation handler for modular components
+        document.addEventListener('click', async function(e) {
+            const navLink = e.target.closest('[data-page]');
+            if (navLink) {
+                e.preventDefault();
+                
+                const pageName = navLink.dataset.page;
+                const pageContainer = document.getElementById('pageContainer');
+                
+                if (!pageContainer) return;
+                
+                try {
+                    // Update active navigation
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        link.classList.remove('active');
+                    });
+                    navLink.classList.add('active');
+                    
+                    // Load page component
+                    const loader = window.ComponentLoader;
+                    await loader.include(pageName, '#pageContainer');
+                    
+                    // Update page state if function exists
+                    if (typeof updateCurrentPage === 'function') {
+                        updateCurrentPage(pageName);
+                    }
+                    
+                    console.log(`📄 Navigated to page: ${pageName}`);
+                    
+                } catch (error) {
+                    console.error(`❌ Failed to load page '${pageName}':`, error);
+                    
+                    // Show error in page container
+                    pageContainer.innerHTML = `
+                        <div class="error-container">
+                            <div class="alert alert-warning">
+                                <h5>Page Loading Error</h5>
+                                <p>Could not load the ${pageName} page. Please try again.</p>
+                                <button class="btn btn-sm btn-primary" onclick="location.reload()">Refresh App</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        });
+
+        // Component loading event listeners
+        document.addEventListener('componentIncluded', function(e) {
+            const { component, target } = e.detail;
+            console.log(`🎯 Component '${component}' included in '${target}'`);
+            
+            // Re-initialize event listeners for the new component
+            if (typeof reinitializeEventListeners === 'function') {
+                reinitializeEventListeners();
+            }
+        });
+    </script>
+
+    <style>
+        /* Loading overlay styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-spinner {
+            text-align: center;
+            color: white;
+        }
+
+        .loading-text {
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .error-container {
+            padding: 2rem;
+            text-align: center;
+            max-width: 600px;
+            margin: 2rem auto;
+        }
+
+        /* Component transition animations */
+        #pageContainer {
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .page-transition-enter {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .page-transition-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+
+        /* Modal container styles */
+        .modal-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1050;
+            pointer-events: none;
+        }
+
+        .modal-container .modal {
+            pointer-events: auto;
+        }
+    </style>
+</body>
+</html> 

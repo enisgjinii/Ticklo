@@ -1,0 +1,43 @@
+<!-- Add Activity Modal Component -->
+<div class="modal fade" id="addActivityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Manual Activity</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addActivityForm">
+                    <div class="form-group">
+                        <label for="activityApp">Application</label>
+                        <input type="text" class="form-control" id="activityApp" name="app" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="activityTitle">Activity Title</label>
+                        <input type="text" class="form-control" id="activityTitle" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="activityCategory">Category</label>
+                        <select class="form-control" id="activityCategory" name="category" required>
+                            <option value="productive">Productive</option>
+                            <option value="break">Break</option>
+                            <option value="distracted">Distracted</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="activityStartTime">Start Time</label>
+                        <input type="datetime-local" class="form-control" id="activityStartTime" name="startTime" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="activityDuration">Duration (minutes)</label>
+                        <input type="number" class="form-control" id="activityDuration" name="duration" min="1" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="addActivityForm" class="btn-primary">Add Activity</button>
+            </div>
+        </div>
+    </div>
+</div> 
