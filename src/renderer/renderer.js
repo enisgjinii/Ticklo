@@ -139,6 +139,11 @@ function setupEventListeners() {
         showAddActivityModal();
     });
     
+    // Add Activity button in activities page
+    document.getElementById('addManualActivity')?.addEventListener('click', () => {
+        showAddActivityModal();
+    });
+    
     document.getElementById('exportDataBtn')?.addEventListener('click', () => {
         exportData();
     });

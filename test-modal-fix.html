@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Fix Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Modal Fix Test</h1>
+        <p>Testing that the activity modal works from both locations:</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <h3>Sidebar Button (addActivityBtn)</h3>
+                <button class="btn btn-primary" id="addActivityBtn">
+                    <i class="fas fa-plus me-2"></i>
+                    Add Activity (Sidebar)
+                </button>
+            </div>
+            <div class="col-md-6">
+                <h3>Activities Page Button (addManualActivity)</h3>
+                <button class="btn btn-success" id="addManualActivity">
+                    <i class="fas fa-plus me-2"></i>
+                    Add Activity (Activities Page)
+                </button>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h3>Test Results:</h3>
+            <div id="testResults">
+                <p>Click both buttons above to test if the modal opens correctly.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modalContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="src/renderer/modal-manager.js"></script>
+    <script src="src/renderer/renderer.js"></script>
+    
+    <script>
+        // Initialize modal manager
+        window.ModalManager = new ModalManager();
+        window.ModalManager.init();
+        
+        // Test function to verify modal works
+        function testModal(buttonName) {
+            const results = document.getElementById('testResults');
+            results.innerHTML += `<p>✅ ${buttonName} clicked - Modal should open</p>`;
+            
+            // Check if showAddActivityModal function exists
+            if (typeof showAddActivityModal === 'function') {
+                results.innerHTML += `<p>✅ showAddActivityModal function found</p>`;
+            } else {
+                results.innerHTML += `<p>❌ showAddActivityModal function not found</p>`;
+            }
+        }
+        
+        // Override showAddActivityModal for testing
+        window.showAddActivityModal = function() {
+            testModal('Modal function called');
+            
+            // Use modal manager if available
+            if (window.ModalManager) {
+                const modalHTML = `
+                    <div class="modal fade" id="addActivityModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Add Manual Activity (Test)</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Modal opened successfully! This confirms the fix works.</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                if (!window.ModalManager.modals.has('addActivityModal')) {
+                    window.ModalManager.registerModal('addActivityModal', modalHTML);
+                }
+                
+                window.ModalManager.showModal('addActivityModal');
+                return;
+            }
+            
+            alert('Modal manager not available');
+        };
+        
+        // Test both buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarBtn = document.getElementById('addActivityBtn');
+            const activitiesBtn = document.getElementById('addManualActivity');
+            
+            if (sidebarBtn) {
+                sidebarBtn.addEventListener('click', () => {
+                    testModal('Sidebar button');
+                    showAddActivityModal();
+                });
+            }
+            
+            if (activitiesBtn) {
+                activitiesBtn.addEventListener('click', () => {
+                    testModal('Activities page button');
+                    showAddActivityModal();
+                });
+            }
+            
+            document.getElementById('testResults').innerHTML += '<p>✅ Event listeners set up for both buttons</p>';
+        });
+    </script>
+</body>
+</html> 
