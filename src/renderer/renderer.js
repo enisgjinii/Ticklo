@@ -1,7 +1,6 @@
 const { ipcRenderer } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const AutoCategorizer = require('./auto-categorizer');
 
 // Data Storage Paths
 const userDataPath = ipcRenderer.sendSync('get-user-data-path');
@@ -47,7 +46,6 @@ let state = {
     currentTimelineView: 'day',
     debugMode: false,
     sessionStartTime: new Date(),
-    autoCategorizer: new AutoCategorizer(),
     // Enhanced state
     currentDate: new Date(),
     selectedPeriod: 'today', // for dashboard filters
@@ -62,7 +60,12 @@ let state = {
         totalEntries: 0
     },
     appIconCache: new Map(),
-    uiScale: 'md' // 'sm', 'md', 'lg'
+    uiScale: 'md', // 'sm', 'md', 'lg'
+    timeline: {
+        zoomLevel: 1, // 0.5, 1, 2, 4
+        viewMode: 'day' // 'day', 'week', 'month'
+    },
+    currentTimelineView: 'day'
 };
 
 // Debug Console
@@ -463,6 +466,59 @@ function endCurrentActivity() {
     saveActivities();
 }
 
+// Simple Auto-Categorization Algorithm
+function autoCategorizeApp(appName, windowTitle = '', url = '') {
+    const context = `${appName} ${windowTitle} ${url}`.toLowerCase();
+    
+    // Productive patterns
+    const productiveKeywords = [
+        'code', 'studio', 'intellij', 'webstorm', 'pycharm', 'atom', 'sublime', 'vim', 'notepad++',
+        'git', 'github', 'gitlab', 'terminal', 'cmd', 'powershell', 'console',
+        'docker', 'postman', 'figma', 'photoshop', 'illustrator', 'blender',
+        'word', 'excel', 'powerpoint', 'onenote', 'notion', 'obsidian',
+        'jira', 'confluence', 'trello', 'asana', 'calculator'
+    ];
+    
+    // Break patterns  
+    const breakKeywords = [
+        'slack', 'teams', 'zoom', 'skype', 'email', 'gmail', 'outlook',
+        'kindle', 'books', 'pdf', 'documentation', 'wikipedia', 'stackoverflow',
+        'spotify', 'music', 'podcast', 'news', 'medium'
+    ];
+    
+    // Distracted patterns
+    const distractedKeywords = [
+        'facebook', 'instagram', 'twitter', 'tiktok', 'snapchat', 'linkedin',
+        'youtube', 'netflix', 'hulu', 'disney', 'twitch', 'steam', 'games',
+        'gaming', 'entertainment', 'movie', 'meme', 'funny'
+    ];
+    
+    // Calculate scores
+    let productiveScore = productiveKeywords.filter(keyword => context.includes(keyword)).length;
+    let breakScore = breakKeywords.filter(keyword => context.includes(keyword)).length;
+    let distractedScore = distractedKeywords.filter(keyword => context.includes(keyword)).length;
+    
+    // Browser-specific logic
+    if (context.includes('chrome') || context.includes('firefox') || context.includes('safari') || context.includes('edge')) {
+        if (context.includes('github') || context.includes('stackoverflow') || context.includes('docs') || context.includes('api')) {
+            productiveScore += 2;
+        } else if (context.includes('facebook') || context.includes('youtube') || context.includes('netflix')) {
+            distractedScore += 2;
+        } else {
+            breakScore += 1;
+        }
+    }
+    
+    // Return category with highest score
+    if (productiveScore >= breakScore && productiveScore >= distractedScore) {
+        return 'productive';
+    } else if (distractedScore >= breakScore) {
+        return 'distracted';
+    } else {
+        return 'break';
+    }
+}
+
 function getCategoryForApp(appName, windowTitle = '', url = '') {
     // Check manual categories first (user overrides)
     if (state.settings.categories[appName]) {
@@ -478,19 +534,15 @@ function getCategoryForApp(appName, windowTitle = '', url = '') {
     }
     
     // Use auto categorization if enabled
-    if (state.settings.autoCategory && state.autoCategorizer) {
-        const autoCategory = state.autoCategorizer.categorizeApp(appName, windowTitle, url);
+    if (state.settings.autoCategory) {
+        const autoCategory = autoCategorizeApp(appName, windowTitle, url);
         
-        // Show confidence level in debug
-        const confidence = state.autoCategorizer.getCategoryConfidence(appName, windowTitle, url);
-        debug.log(`Auto categorized "${appName}" as "${autoCategory}" with ${(confidence * 100).toFixed(1)}% confidence`);
+        debug.log(`Auto categorized "${appName}" as "${autoCategory}"`);
+        showToast(`Auto-categorized ${appName} as ${autoCategory}`, 'info');
         
-        // If confidence is high, auto-add to manual categories for future use
-        if (confidence > 0.8) {
-            state.settings.categories[appName] = autoCategory;
-            saveSettings();
-            debug.log(`High confidence: Auto-added "${appName}" to manual categories as "${autoCategory}"`);
-        }
+        // Auto-add to manual categories for consistency
+        state.settings.categories[appName] = autoCategory;
+        saveSettings();
         
         return autoCategory;
     }
@@ -843,10 +895,17 @@ function updateTimeline() {
             break;
     }
     
-    // Generate hour labels (24 hours)
+    // Filter activities longer than 2 minutes
+    activities = activities.filter(activity => {
+        const duration = activity.duration || (Date.now() - new Date(activity.startTime));
+        return duration >= 120000; // 2 minutes
+    });
+    
+    // Generate hour labels (24 hours) with zoom scaling
+    const hourHeight = getTimelineHourHeight();
     const hours = Array.from({length: 24}, (_, i) => {
         return `
-            <div class="h-16 px-3 py-2 text-xs text-muted-foreground border-b border-border flex items-center justify-center">
+            <div class="px-3 py-2 text-xs text-muted-foreground border-b border-border flex items-center justify-center" style="height: ${hourHeight}px;">
                 ${i.toString().padStart(2, '0')}:00
             </div>
         `;
@@ -859,14 +918,14 @@ function updateTimeline() {
             <div class="flex items-center justify-center h-64">
                 <div class="text-center">
                     <i class="fas fa-calendar-times text-muted-foreground text-3xl mb-3"></i>
-                    <p class="text-muted-foreground">No activities in this time period</p>
+                    <p class="text-muted-foreground">No activities tracked (showing only 2+ min activities)</p>
                 </div>
             </div>
         `;
         return;
     }
     
-    // Generate 24 hour segments
+    // Generate 24 hour segments with enhanced visualization
     const segments = Array.from({length: 24}, (_, hour) => {
         // Find activities that occur in this hour
         const hourActivities = activities.filter(activity => {
@@ -890,7 +949,7 @@ function updateTimeline() {
             
             const left = (startMinutes / 60) * 100;
             const width = ((endMinutes - startMinutes) / 60) * 100;
-            const top = index * 28; // Stack overlapping activities
+            const top = index * (28 * state.timeline.zoomLevel); // Stack with zoom scaling
             
             const duration = activityEnd - activityStart;
             const appIcon = getAppIcon(activity.app);
@@ -899,25 +958,30 @@ function updateTimeline() {
                 `<i class="fas fa-${getCategoryIcon(activity.category)} text-sm mr-2"></i>`;
             
             const categoryColors = {
-                'productive': 'bg-green-500 border-green-600 text-white',
-                'break': 'bg-yellow-500 border-yellow-600 text-white',
-                'distracted': 'bg-red-500 border-red-600 text-white'
+                'productive': 'bg-green-500 border-green-600 text-white hover:bg-green-600',
+                'break': 'bg-yellow-500 border-yellow-600 text-white hover:bg-yellow-600',
+                'distracted': 'bg-red-500 border-red-600 text-white hover:bg-red-600'
             };
             
+            const blockHeight = Math.max(24, 20 * state.timeline.zoomLevel);
+            
             return `
-                <div class="absolute px-2 py-1 text-xs rounded border-l-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${categoryColors[activity.category] || 'bg-gray-500 border-gray-600 text-white'}" 
-                     style="left: ${left}%; width: ${width}%; top: ${top}px; min-height: 24px;"
+                <div class="absolute px-2 py-1 text-xs rounded border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer ${categoryColors[activity.category] || 'bg-gray-500 border-gray-600 text-white hover:bg-gray-600'}" 
+                     style="left: ${left}%; width: ${width}%; top: ${top}px; min-height: ${blockHeight}px;"
+                     onclick="showActivityDetails('${activity.id}')"
                      title="${activity.app} - ${activity.title || 'No title'} (${formatDuration(duration)})">
                     <div class="flex items-center">
-                        ${iconHtml}
+                        ${state.timeline.zoomLevel >= 1 ? iconHtml : ''}
                         <span class="truncate">${activity.app}</span>
+                        ${state.timeline.zoomLevel >= 2 ? `<span class="ml-auto text-xs opacity-75">${Math.round(duration / 60000)}m</span>` : ''}
                     </div>
+                    ${state.timeline.zoomLevel >= 2 && activity.title ? `<div class="text-xs opacity-75 truncate mt-1">${activity.title}</div>` : ''}
                 </div>
             `;
         }).join('');
         
         return `
-            <div class="relative h-16 border-b border-border bg-background hover:bg-muted/20 transition-colors">
+            <div class="relative border-b border-border bg-background hover:bg-muted/20 transition-colors" style="height: ${hourHeight}px;">
                 ${blocks}
             </div>
         `;
@@ -944,12 +1008,121 @@ function updateCurrentTimeIndicator() {
     const hours = now.getHours();
     const minutes = now.getMinutes();
     
-    // Calculate vertical position based on hour and minute (64px per hour segment)
-    const segmentHeight = 64; // Height of each hour segment (h-16 = 64px)
+    // Calculate vertical position based on hour and minute with zoom scaling
+    const segmentHeight = getTimelineHourHeight();
     const headerHeight = 56; // Height of the header
     const topPosition = headerHeight + hours * segmentHeight + (minutes / 60) * segmentHeight;
     
     indicator.style.top = `${topPosition}px`;
+}
+
+// Timeline Enhancement Functions
+function getTimelineHourHeight() {
+    // Base height is 64px (h-16), scale with zoom
+    return Math.max(32, 64 * state.timeline.zoomLevel);
+}
+
+function changeTimelineView(viewMode) {
+    state.currentTimelineView = viewMode;
+    state.timeline.viewMode = viewMode;
+    
+    // Update view buttons
+    document.querySelectorAll('[data-view]').forEach(btn => {
+        if (btn.dataset.view === viewMode) {
+            btn.classList.remove('bg-secondary', 'text-secondary-foreground');
+            btn.classList.add('bg-primary', 'text-primary-foreground');
+        } else {
+            btn.classList.remove('bg-primary', 'text-primary-foreground');
+            btn.classList.add('bg-secondary', 'text-secondary-foreground');
+        }
+    });
+    
+    updateTimeline();
+    showToast(`Timeline view changed to ${viewMode}`, 'info');
+}
+
+function zoomTimeline(zoomLevel) {
+    state.timeline.zoomLevel = zoomLevel;
+    
+    // Update zoom buttons
+    document.querySelectorAll('[data-zoom]').forEach(btn => {
+        if (parseFloat(btn.dataset.zoom) === zoomLevel) {
+            btn.classList.remove('bg-secondary', 'text-secondary-foreground');
+            btn.classList.add('bg-primary', 'text-primary-foreground');
+        } else {
+            btn.classList.remove('bg-primary', 'text-primary-foreground');
+            btn.classList.add('bg-secondary', 'text-secondary-foreground');
+        }
+    });
+    
+    updateTimeline();
+    showToast(`Timeline zoom set to ${zoomLevel}x`, 'info');
+}
+
+function showActivityDetails(activityId) {
+    const activity = state.activities.find(a => a.id === activityId);
+    if (!activity) return;
+    
+    const modal = document.getElementById('activityDetailsModal');
+    if (!modal) {
+        // Create modal if it doesn't exist
+        document.body.insertAdjacentHTML('beforeend', `
+            <div id="activityDetailsModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+                <div class="bg-card p-6 rounded-lg shadow-lg max-w-md w-full m-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Activity Details</h3>
+                        <button onclick="hideModal('activityDetailsModal')" class="text-muted-foreground hover:text-foreground text-xl">×</button>
+                    </div>
+                    <div id="activityDetailsContent"></div>
+                </div>
+            </div>
+        `);
+    }
+    
+    const content = document.getElementById('activityDetailsContent');
+    const appIcon = getAppIcon(activity.app);
+    const duration = formatDuration(activity.duration || 0);
+    const categoryColor = getCategoryColor(activity.category);
+    
+    content.innerHTML = `
+        <div class="space-y-4">
+            <div class="flex items-center space-x-3">
+                ${appIcon ? `<img src="${appIcon}" alt="${activity.app}" class="w-8 h-8" />` : '<div class="w-8 h-8 bg-muted rounded"></div>'}
+                <div>
+                    <div class="font-medium">${activity.app}</div>
+                    <div class="text-sm text-muted-foreground">${activity.title || 'No title'}</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <div class="text-muted-foreground">Category</div>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-${categoryColor} rounded-full mr-2"></div>
+                        ${activity.category}
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted-foreground">Duration</div>
+                    <div>${duration}</div>
+                </div>
+                <div>
+                    <div class="text-muted-foreground">Start Time</div>
+                    <div>${new Date(activity.startTime).toLocaleString()}</div>
+                </div>
+                <div>
+                    <div class="text-muted-foreground">End Time</div>
+                    <div>${activity.endTime ? new Date(activity.endTime).toLocaleString() : 'Ongoing'}</div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-4">
+                <button onclick="hideModal('activityDetailsModal')" class="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
+    
+    showModal('activityDetailsModal');
 }
 
 function updateActivitiesTable() {
@@ -1155,7 +1328,7 @@ function updatePagination(totalPages) {
     container.innerHTML = paginationHTML;
 }
 
-// Global function for pagination
+// Global functions for pagination and UI interactions
 window.goToPage = function(page) {
     if (page >= 1 && page <= Math.ceil(state.pagination.totalEntries / state.pagination.entriesPerPage)) {
         state.pagination.currentPage = page;
@@ -1163,85 +1336,217 @@ window.goToPage = function(page) {
     }
 };
 
+// Export global functions for onclick handlers
+window.changeTimelineView = changeTimelineView;
+window.zoomTimeline = zoomTimeline;
+window.navigateDate = navigateDate;
+window.showActivityDetails = showActivityDetails;
+window.addAppToCategory = addAppToCategory;
+window.removeAppFromCategory = removeAppFromCategory;
+window.bulkCategorizeApps = bulkCategorizeApps;
+window.processBulkCategorize = processBulkCategorize;
+window.importCategoriesFromCSV = importCategoriesFromCSV;
+window.exportCategoriesToCSV = exportCategoriesToCSV;
+window.deleteActivity = deleteActivity;
+
+// Enhanced Analytics Function
 function updateAnalytics() {
     const container = document.getElementById('analyticsContent');
     if (!container) return;
     
-    const stats = calculateAnalytics();
+    const stats = calculateEnhancedAnalytics();
     
     container.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="card bg-card border border-border rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-4 flex items-center">
-                    <i class="fas fa-chart-line text-blue-600 mr-2"></i>
-                    Weekly Overview
-                </h3>
-                <div class="space-y-3">
-                    <div class="flex justify-between">
-                        <span class="text-muted-foreground">Total Time:</span>
-                        <span class="font-semibold">${formatDuration(stats.weekTotal)}</span>
+        <div class="space-y-6">
+            <!-- Overview Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="card bg-card border border-border rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-muted-foreground">Total Today</p>
+                            <p class="text-2xl font-bold">${formatDuration(stats.todayTotal)}</p>
+                        </div>
+                        <div class="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                            <i class="fas fa-clock text-blue-600"></i>
+                        </div>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-muted-foreground">Daily Average:</span>
-                        <span class="font-semibold">${formatDuration(stats.dailyAverage)}</span>
+                </div>
+                
+                <div class="card bg-card border border-border rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-muted-foreground">Productivity Score</p>
+                            <p class="text-2xl font-bold text-green-600">${stats.productivityScore}/100</p>
+                        </div>
+                        <div class="p-3 bg-green-100 dark:bg-green-900/20 rounded-full">
+                            <i class="fas fa-trophy text-green-600"></i>
+                        </div>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-muted-foreground">Most Productive Day:</span>
-                        <span class="font-semibold">${stats.mostProductiveDay}</span>
+                </div>
+                
+                <div class="card bg-card border border-border rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-muted-foreground">Focus Sessions</p>
+                            <p class="text-2xl font-bold">${stats.focusSessions}</p>
+                        </div>
+                        <div class="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full">
+                            <i class="fas fa-bullseye text-purple-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card bg-card border border-border rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-muted-foreground">Streak Days</p>
+                            <p class="text-2xl font-bold text-orange-600">${stats.streakDays}</p>
+                        </div>
+                        <div class="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-full">
+                            <i class="fas fa-fire text-orange-600"></i>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <div class="card bg-card border border-border rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-4 flex items-center">
-                    <i class="fas fa-chart-pie text-green-600 mr-2"></i>
-                    Category Distribution
-                </h3>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                            <span class="text-muted-foreground">Productive</span>
+            <!-- Detailed Analytics -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Category Distribution -->
+                <div class="card bg-card border border-border rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fas fa-chart-pie text-green-600 mr-2"></i>
+                        Category Distribution
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
+                                <span class="text-muted-foreground">Productive</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-semibold text-green-600">${stats.productivePercent}%</span>
+                                <div class="w-20 h-2 bg-muted rounded-full">
+                                    <div class="h-full bg-green-500 rounded-full" style="width: ${stats.productivePercent}%"></div>
+                                </div>
+                            </div>
                         </div>
-                        <span class="font-semibold text-green-600">${stats.productivePercent}%</span>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-yellow-500 rounded-full mr-3"></div>
+                                <span class="text-muted-foreground">Break</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-semibold text-yellow-600">${stats.breakPercent}%</span>
+                                <div class="w-20 h-2 bg-muted rounded-full">
+                                    <div class="h-full bg-yellow-500 rounded-full" style="width: ${stats.breakPercent}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-red-500 rounded-full mr-3"></div>
+                                <span class="text-muted-foreground">Distracted</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-semibold text-red-600">${stats.distractedPercent}%</span>
+                                <div class="w-20 h-2 bg-muted rounded-full">
+                                    <div class="h-full bg-red-500 rounded-full" style="width: ${stats.distractedPercent}%"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
-                            <span class="text-muted-foreground">Break</span>
-                        </div>
-                        <span class="font-semibold text-yellow-600">${stats.breakPercent}%</span>
+                </div>
+                
+                <!-- Peak Hours -->
+                <div class="card bg-card border border-border rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fas fa-clock text-blue-600 mr-2"></i>
+                        Peak Productivity Hours
+                    </h3>
+                    <div class="space-y-2">
+                        ${stats.peakHours.map((hour, index) => `
+                            <div class="flex items-center justify-between py-2 ${index === 0 ? 'border-b border-border' : ''}">
+                                <span class="text-sm ${index === 0 ? 'font-semibold' : 'text-muted-foreground'}">${hour.time}</span>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm ${index === 0 ? 'font-semibold' : ''}">${formatDuration(hour.duration)}</span>
+                                    <div class="w-16 h-2 bg-muted rounded-full">
+                                        <div class="h-full bg-blue-500 rounded-full" style="width: ${hour.percentage}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
-                            <span class="text-muted-foreground">Distracted</span>
+                </div>
+                
+                <!-- Weekly Trends -->
+                <div class="card bg-card border border-border rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fas fa-trending-up text-purple-600 mr-2"></i>
+                        Weekly Trends
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Total This Week:</span>
+                            <span class="font-semibold">${formatDuration(stats.weekTotal)}</span>
                         </div>
-                        <span class="font-semibold text-red-600">${stats.distractedPercent}%</span>
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Daily Average:</span>
+                            <span class="font-semibold">${formatDuration(stats.dailyAverage)}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">vs Last Week:</span>
+                            <span class="font-semibold ${stats.weekTrend >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                ${stats.weekTrend > 0 ? '+' : ''}${stats.weekTrend}%
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-muted-foreground">Best Day:</span>
+                            <span class="font-semibold">${stats.mostProductiveDay}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Top Applications -->
+                <div class="card bg-card border border-border rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fas fa-star text-yellow-600 mr-2"></i>
+                        Top Applications
+                    </h3>
+                    <div class="space-y-3">
+                        ${stats.topApps.slice(0, 5).map((app, index) => `
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-sm font-medium w-4">${index + 1}</span>
+                                    ${app.icon ? `<img src="${app.icon}" alt="${app.name}" class="w-5 h-5" />` : '<div class="w-5 h-5 bg-muted rounded"></div>'}
+                                    <span class="text-sm truncate">${app.name}</span>
+                                </div>
+                                <div class="text-sm font-medium">${formatDuration(app.duration)}</div>
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
             </div>
             
+            <!-- Insights -->
             <div class="card bg-card border border-border rounded-lg p-6">
                 <h3 class="text-lg font-semibold mb-4 flex items-center">
-                    <i class="fas fa-trending-up text-purple-600 mr-2"></i>
-                    Productivity Trends
+                    <i class="fas fa-lightbulb text-yellow-600 mr-2"></i>
+                    Insights & Recommendations
                 </h3>
-                <div class="space-y-3">
-                    <div class="flex justify-between">
-                        <span class="text-muted-foreground">Week vs Last Week:</span>
-                        <span class="font-semibold ${stats.weekTrend >= 0 ? 'text-green-600' : 'text-red-600'}">
-                            ${stats.weekTrend > 0 ? '+' : ''}${stats.weekTrend}%
-                        </span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-muted-foreground">Best Time:</span>
-                        <span class="font-semibold">${stats.bestHour}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-muted-foreground">Avg Session:</span>
-                        <span class="font-semibold">${formatDuration(stats.avgSessionLength)}</span>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${stats.insights.map(insight => `
+                        <div class="p-4 bg-accent rounded-lg">
+                            <div class="flex items-start space-x-3">
+                                <div class="p-2 bg-${insight.color}-100 dark:bg-${insight.color}-900/20 rounded-full">
+                                    <i class="fas fa-${insight.icon} text-${insight.color}-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-sm">${insight.title}</h4>
+                                    <p class="text-xs text-muted-foreground mt-1">${insight.description}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
             </div>
         </div>
@@ -1305,6 +1610,154 @@ function updateCategories() {
             }).join('')}
         </div>
     `;
+}
+
+// Categories Management Functions
+function addAppToCategory(category) {
+    const appName = prompt(`Enter the application name to categorize as "${category}":`);
+    if (!appName || !appName.trim()) {
+        showToast('Please enter a valid application name', 'warning');
+        return;
+    }
+    
+    const trimmedName = appName.trim();
+    
+    // Check if app already exists in any category
+    const existingCategory = state.settings.categories[trimmedName];
+    if (existingCategory) {
+        if (existingCategory === category) {
+            showToast(`${trimmedName} is already categorized as ${category}`, 'info');
+            return;
+        } else {
+            const confirmChange = confirm(`${trimmedName} is currently categorized as "${existingCategory}". Change to "${category}"?`);
+            if (!confirmChange) return;
+        }
+    }
+    
+    // Add/update the category
+    state.settings.categories[trimmedName] = category;
+    saveSettings();
+    updateCategories();
+    showToast(`${trimmedName} added to ${category} category`, 'success');
+}
+
+function removeAppFromCategory(appName) {
+    const confirmRemove = confirm(`Remove "${appName}" from categories? It will be auto-categorized in the future.`);
+    if (!confirmRemove) return;
+    
+    delete state.settings.categories[appName];
+    saveSettings();
+    updateCategories();
+    showToast(`${appName} removed from categories`, 'success');
+}
+
+// Enhanced category management with bulk operations
+function bulkCategorizeApps() {
+    const modal = document.getElementById('bulkCategorizeModal');
+    if (!modal) {
+        // Create bulk categorize modal
+        document.body.insertAdjacentHTML('beforeend', `
+            <div id="bulkCategorizeModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+                <div class="bg-card p-6 rounded-lg shadow-lg max-w-md w-full m-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Bulk Categorize Apps</h3>
+                        <button onclick="hideModal('bulkCategorizeModal')" class="text-muted-foreground hover:text-foreground text-xl">×</button>
+                    </div>
+                    <div class="space-y-4">
+                        <textarea id="bulkAppsText" placeholder="Enter app names, one per line" class="w-full p-3 border border-border rounded-lg h-32 resize-none"></textarea>
+                        <select id="bulkCategory" class="w-full p-3 border border-border rounded-lg">
+                            <option value="productive">Productive</option>
+                            <option value="break">Break</option>
+                            <option value="distracted">Distracted</option>
+                        </select>
+                        <div class="flex justify-end space-x-2">
+                            <button onclick="hideModal('bulkCategorizeModal')" class="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80">Cancel</button>
+                            <button onclick="processBulkCategorize()" class="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">Categorize</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+    }
+    
+    showModal('bulkCategorizeModal');
+}
+
+function processBulkCategorize() {
+    const appsText = document.getElementById('bulkAppsText').value;
+    const category = document.getElementById('bulkCategory').value;
+    
+    if (!appsText.trim()) {
+        showToast('Please enter app names', 'warning');
+        return;
+    }
+    
+    const appNames = appsText.split('\n')
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+    
+    let addedCount = 0;
+    appNames.forEach(appName => {
+        state.settings.categories[appName] = category;
+        addedCount++;
+    });
+    
+    saveSettings();
+    updateCategories();
+    hideModal('bulkCategorizeModal');
+    
+    showToast(`${addedCount} apps categorized as ${category}`, 'success');
+}
+
+function importCategoriesFromCSV() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            const text = await file.text();
+            const lines = text.split('\n').slice(1); // Skip header
+            let importedCount = 0;
+            
+            lines.forEach(line => {
+                const [appName, category] = line.split(',').map(s => s.trim().replace(/"/g, ''));
+                if (appName && category && ['productive', 'break', 'distracted'].includes(category)) {
+                    state.settings.categories[appName] = category;
+                    importedCount++;
+                }
+            });
+            
+            saveSettings();
+            updateCategories();
+            showToast(`Imported ${importedCount} app categories`, 'success');
+        } catch (error) {
+            console.error('Error importing categories:', error);
+            showToast('Error importing categories', 'error');
+        }
+    };
+    
+    input.click();
+}
+
+function exportCategoriesToCSV() {
+    const csvContent = 'App Name,Category\n' + 
+        Object.entries(state.settings.categories)
+            .map(([app, category]) => `"${app}","${category}"`)
+            .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ticklo-categories.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showToast('Categories exported to CSV', 'success');
 }
 
 function updateSettings() {
@@ -1470,6 +1923,246 @@ function calculateAnalytics() {
         avgSessionLength: weekActivities.length > 0 ? weekTotal / weekActivities.length : 0,
         weekTrend: 0 // Would calculate vs previous week
     };
+}
+
+// Enhanced Analytics Calculation
+function calculateEnhancedAnalytics() {
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    
+    const weekStart = new Date(now);
+    weekStart.setDate(weekStart.getDate() - 7);
+    
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Get activities for different periods
+    const todayActivities = state.activities.filter(a => new Date(a.startTime) >= today);
+    const weekActivities = state.activities.filter(a => new Date(a.startTime) >= weekStart);
+    const monthActivities = state.activities.filter(a => new Date(a.startTime) >= monthStart);
+    
+    // Calculate totals
+    const todayTotal = todayActivities.reduce((sum, a) => sum + (a.duration || 0), 0);
+    const weekTotal = weekActivities.reduce((sum, a) => sum + (a.duration || 0), 0);
+    
+    // Category calculations
+    let productiveTime = 0, breakTime = 0, distractedTime = 0;
+    weekActivities.forEach(activity => {
+        const duration = activity.duration || 0;
+        switch (activity.category) {
+            case 'productive': productiveTime += duration; break;
+            case 'break': breakTime += duration; break;
+            case 'distracted': distractedTime += duration; break;
+        }
+    });
+    
+    // Productivity score (0-100)
+    const productivityScore = weekTotal > 0 ? 
+        Math.round((productiveTime / weekTotal) * 100) : 0;
+    
+    // Focus sessions (productive activities > 15 min)
+    const focusSessions = todayActivities.filter(a => 
+        a.category === 'productive' && (a.duration || 0) >= 900000
+    ).length;
+    
+    // Streak calculation (simplified - days with productive activities)
+    const streakDays = calculateProductiveStreak();
+    
+    // Peak hours analysis
+    const hourlyData = {};
+    weekActivities.forEach(activity => {
+        if (activity.category === 'productive') {
+            const hour = new Date(activity.startTime).getHours();
+            hourlyData[hour] = (hourlyData[hour] || 0) + (activity.duration || 0);
+        }
+    });
+    
+    const peakHours = Object.entries(hourlyData)
+        .map(([hour, duration]) => ({
+            time: `${hour.padStart(2, '0')}:00`,
+            duration: duration,
+            percentage: Math.round((duration / Math.max(...Object.values(hourlyData))) * 100)
+        }))
+        .sort((a, b) => b.duration - a.duration)
+        .slice(0, 5);
+    
+    // Top applications
+    const appData = {};
+    weekActivities.forEach(activity => {
+        if (!appData[activity.app]) {
+            appData[activity.app] = {
+                name: activity.app,
+                duration: 0,
+                icon: getAppIcon(activity.app)
+            };
+        }
+        appData[activity.app].duration += activity.duration || 0;
+    });
+    
+    const topApps = Object.values(appData)
+        .sort((a, b) => b.duration - a.duration)
+        .slice(0, 10);
+    
+    // Generate insights
+    const insights = generateInsights({
+        todayTotal,
+        weekTotal,
+        productiveTime,
+        distractedTime,
+        focusSessions,
+        peakHours,
+        topApps
+    });
+    
+    // Daily totals for trends
+    const dailyTotals = {};
+    weekActivities.forEach(activity => {
+        const day = new Date(activity.startTime).toLocaleDateString();
+        dailyTotals[day] = (dailyTotals[day] || 0) + (activity.duration || 0);
+    });
+    
+    const mostProductiveDay = Object.entries(dailyTotals)
+        .sort(([, a], [, b]) => b - a)[0]?.[0] || 'N/A';
+    
+    return {
+        todayTotal,
+        weekTotal,
+        dailyAverage: weekTotal / 7,
+        productivePercent: weekTotal > 0 ? Math.round((productiveTime / weekTotal) * 100) : 0,
+        breakPercent: weekTotal > 0 ? Math.round((breakTime / weekTotal) * 100) : 0,
+        distractedPercent: weekTotal > 0 ? Math.round((distractedTime / weekTotal) * 100) : 0,
+        productivityScore,
+        focusSessions,
+        streakDays,
+        peakHours,
+        topApps,
+        insights,
+        mostProductiveDay,
+        weekTrend: 0
+    };
+}
+
+function calculateProductiveStreak() {
+    const now = new Date();
+    let currentDate = new Date(now);
+    let streak = 0;
+    
+    // Check last 30 days for streak
+    for (let i = 0; i < 30; i++) {
+        const dayActivities = state.activities.filter(activity => {
+            const activityDate = new Date(activity.startTime);
+            return activityDate.toDateString() === currentDate.toDateString() &&
+                   activity.category === 'productive' &&
+                   (activity.duration || 0) >= 1800000; // At least 30 min productive
+        });
+        
+        if (dayActivities.length > 0) {
+            streak++;
+        } else if (streak > 0) {
+            break; // Streak broken
+        }
+        
+        currentDate.setDate(currentDate.getDate() - 1);
+    }
+    
+    return streak;
+}
+
+function generateInsights(data) {
+    const insights = [];
+    
+    // Productivity insights
+    if (data.productiveTime > 0) {
+        const productivePercent = (data.productiveTime / data.weekTotal) * 100;
+        if (productivePercent > 70) {
+            insights.push({
+                title: 'Great Productivity!',
+                description: 'You\'re maintaining excellent focus with high productive time.',
+                icon: 'trophy',
+                color: 'green'
+            });
+        } else if (productivePercent < 30) {
+            insights.push({
+                title: 'Focus Opportunity',
+                description: 'Consider reducing distractions to boost productivity.',
+                icon: 'target',
+                color: 'orange'
+            });
+        }
+    }
+    
+    // Peak hours insight
+    if (data.peakHours.length > 0) {
+        const peakHour = data.peakHours[0].time;
+        insights.push({
+            title: 'Peak Performance',
+            description: `You're most productive around ${peakHour}. Schedule important tasks then.`,
+            icon: 'clock',
+            color: 'blue'
+        });
+    }
+    
+    // Focus sessions insight
+    if (data.focusSessions === 0) {
+        insights.push({
+            title: 'Build Focus Habits',
+            description: 'Try to maintain 15+ minute focused work sessions for better productivity.',
+            icon: 'bullseye',
+            color: 'purple'
+        });
+    } else if (data.focusSessions > 5) {
+        insights.push({
+            title: 'Excellent Focus',
+            description: `${data.focusSessions} deep work sessions today. Keep it up!`,
+            icon: 'fire',
+            color: 'orange'
+        });
+    }
+    
+    // Break recommendations
+    const breakPercent = (data.weekTotal - data.productiveTime - data.distractedTime) / data.weekTotal * 100;
+    if (breakPercent < 10) {
+        insights.push({
+            title: 'Take More Breaks',
+            description: 'Regular breaks improve focus and prevent burnout.',
+            icon: 'coffee',
+            color: 'yellow'
+        });
+    }
+    
+    // App usage insight
+    if (data.topApps.length > 0) {
+        const topApp = data.topApps[0];
+        insights.push({
+            title: 'Top Application',
+            description: `${topApp.name} is your most used app this week.`,
+            icon: 'desktop',
+            color: 'indigo'
+        });
+    }
+    
+    return insights;
+}
+
+// Activity Management Functions
+function deleteActivity(activityId) {
+    const confirmDelete = confirm('Are you sure you want to delete this activity? This action cannot be undone.');
+    if (!confirmDelete) return;
+    
+    const index = state.activities.findIndex(a => a.id === activityId);
+    if (index === -1) {
+        showToast('Activity not found', 'error');
+        return;
+    }
+    
+    const activity = state.activities[index];
+    state.activities.splice(index, 1);
+    
+    saveActivities();
+    updateActivitiesTable();
+    updateUI();
+    
+    showToast(`Deleted activity: ${activity.app}`, 'success');
 }
 
 // Data Management

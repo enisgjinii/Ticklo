@@ -504,26 +504,42 @@
                 <div class="flex items-center justify-between p-6">
                     <div>
                         <h1 class="text-3xl font-bold">Timeline</h1>
-                        <p class="text-muted-foreground mt-1">Visual representation of your day</p>
+                        <p class="text-muted-foreground mt-1">Visual representation of your activities (2+ min)</p>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <!-- Zoom Controls -->
+                        <div class="flex items-center space-x-1 bg-secondary rounded-lg p-1">
+                            <span class="text-xs text-muted-foreground px-2">Zoom:</span>
+                            <button
+                                class="zoom-btn px-2 py-1 text-xs rounded-md bg-secondary text-secondary-foreground transition-colors"
+                                data-zoom="0.5" onclick="zoomTimeline(0.5)">0.5x</button>
+                            <button
+                                class="zoom-btn px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground transition-colors"
+                                data-zoom="1" onclick="zoomTimeline(1)">1x</button>
+                            <button
+                                class="zoom-btn px-2 py-1 text-xs rounded-md bg-secondary text-secondary-foreground transition-colors"
+                                data-zoom="2" onclick="zoomTimeline(2)">2x</button>
+                            <button
+                                class="zoom-btn px-2 py-1 text-xs rounded-md bg-secondary text-secondary-foreground transition-colors"
+                                data-zoom="4" onclick="zoomTimeline(4)">4x</button>
+                        </div>
                         <!-- View Toggle -->
                         <div class="flex items-center space-x-1 bg-secondary rounded-lg p-1">
                             <button
                                 class="toggle-btn px-3 py-1 text-sm rounded-md bg-primary text-primary-foreground transition-colors"
-                                data-view="day">Day</button>
+                                data-view="day" onclick="changeTimelineView('day')">Day</button>
                             <button
                                 class="toggle-btn px-3 py-1 text-sm rounded-md text-muted-foreground hover:bg-background hover:text-foreground transition-colors"
-                                data-view="week">Week</button>
+                                data-view="week" onclick="changeTimelineView('week')">Week</button>
                             <button
                                 class="toggle-btn px-3 py-1 text-sm rounded-md text-muted-foreground hover:bg-background hover:text-foreground transition-colors"
-                                data-view="month">Month</button>
+                                data-view="month" onclick="changeTimelineView('month')">Month</button>
                         </div>
                         <!-- Date Navigation -->
                         <div class="flex items-center space-x-1 bg-secondary rounded-lg p-1">
                             <button
                                 class="flex items-center justify-center w-8 h-8 rounded-md hover:bg-background transition-colors"
-                                id="timelinePrevDate" aria-label="Previous date">
+                                id="timelinePrevDate" onclick="navigateDate(-1)" aria-label="Previous date">
                                 <i class="fas fa-chevron-left text-xs"></i>
                             </button>
                             <div class="flex items-center space-x-2 px-3 py-1">
@@ -532,7 +548,7 @@
                             </div>
                             <button
                                 class="flex items-center justify-center w-8 h-8 rounded-md hover:bg-background transition-colors"
-                                id="timelineNextDate" aria-label="Next date">
+                                id="timelineNextDate" onclick="navigateDate(1)" aria-label="Next date">
                                 <i class="fas fa-chevron-right text-xs"></i>
                             </button>
                         </div>
@@ -675,12 +691,34 @@
                 </div>
             </div>
         </div>
-        <!-- Categories Page -->
+        <!-- Enhanced Categories Page -->
         <div class="page hidden flex-1 flex-col" id="categoriesPage">
             <div class="border-b border-border bg-card">
-                <div class="p-6">
-                    <h1 class="text-3xl font-bold">Categories</h1>
-                    <p class="text-muted-foreground mt-1">Manage app categorization</p>
+                <div class="flex items-center justify-between p-6">
+                    <div>
+                        <h1 class="text-3xl font-bold">Categories</h1>
+                        <p class="text-muted-foreground mt-1">Manage app categorization and auto-tagging</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button
+                            class="btn flex items-center space-x-2 px-4 py-2 border border-border bg-background hover:bg-secondary rounded-lg transition-colors"
+                            onclick="importCategoriesFromCSV()">
+                            <i class="fas fa-upload text-sm"></i>
+                            <span>Import CSV</span>
+                        </button>
+                        <button
+                            class="btn flex items-center space-x-2 px-4 py-2 border border-border bg-background hover:bg-secondary rounded-lg transition-colors"
+                            onclick="exportCategoriesToCSV()">
+                            <i class="fas fa-download text-sm"></i>
+                            <span>Export CSV</span>
+                        </button>
+                        <button
+                            class="btn flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors"
+                            onclick="bulkCategorizeApps()">
+                            <i class="fas fa-layer-group text-sm"></i>
+                            <span>Bulk Add</span>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="flex-1 p-6 overflow-y-auto">
@@ -689,125 +727,206 @@
                 </div>
             </div>
         </div>
-        <!-- Settings Page -->
+        <!-- Enhanced Settings Page -->
         <div class="page hidden flex-1 flex-col" id="settingsPage">
             <div class="border-b border-border bg-card">
                 <div class="p-6">
                     <h1 class="text-3xl font-bold">Settings</h1>
-                    <p class="text-muted-foreground mt-1">Configure your preferences</p>
+                    <p class="text-muted-foreground mt-1">Configure your preferences and privacy</p>
                 </div>
             </div>
             <div class="flex-1 p-6 overflow-y-auto">
-                <div class="max-w-2xl space-y-6">
-                    <!-- General Settings -->
-                    <div class="card bg-card border border-border rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-6">General</h3>
-                        <div class="space-y-6">
-                            <div class="flex items-center justify-between">
-                                <div class="space-y-0.5">
-                                    <div class="font-medium">Auto-start tracking</div>
-                                    <div class="text-sm text-muted-foreground">Start tracking when app launches</div>
+                <div class="max-w-4xl space-y-6">
+                    <!-- Quick Actions Card -->
+                    <div class="card bg-gradient-to-r from-primary/5 to-accent/5 border border-border rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <i class="fas fa-bolt text-primary mr-2"></i>
+                            Quick Actions
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button
+                                class="btn flex items-center space-x-2 px-4 py-3 border border-border bg-background hover:bg-secondary rounded-lg transition-colors"
+                                id="exportSettings">
+                                <i class="fas fa-download text-green-600"></i>
+                                <div class="text-left">
+                                    <div class="font-medium">Export Settings</div>
+                                    <div class="text-xs text-muted-foreground">Backup your configuration</div>
                                 </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="autoStart" aria-label="Auto start with system" checked
-                                        class="sr-only peer">
-                                    <div
-                                        class="relative w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                            </button>
+                            <button
+                                class="btn flex items-center space-x-2 px-4 py-3 border border-border bg-background hover:bg-secondary rounded-lg transition-colors"
+                                id="importSettings">
+                                <i class="fas fa-upload text-blue-600"></i>
+                                <div class="text-left">
+                                    <div class="font-medium">Import Settings</div>
+                                    <div class="text-xs text-muted-foreground">Restore configuration</div>
+                                </div>
+                            </button>
+                            <button
+                                class="btn flex items-center space-x-2 px-4 py-3 bg-destructive/10 border border-destructive/20 hover:bg-destructive/20 rounded-lg transition-colors"
+                                id="clearData">
+                                <i class="fas fa-trash text-destructive"></i>
+                                <div class="text-left">
+                                    <div class="font-medium text-destructive">Clear All Data</div>
+                                    <div class="text-xs text-muted-foreground">Permanently delete data</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- General Settings -->
+                        <div class="card bg-card border border-border rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-6 flex items-center">
+                                <i class="fas fa-cog text-muted-foreground mr-2"></i>
+                                General Settings
+                            </h3>
+                            <div class="space-y-6">
+                                <div class="flex items-center justify-between p-4 bg-accent rounded-lg">
+                                    <div class="space-y-1">
+                                        <div class="font-medium flex items-center">
+                                            <i class="fas fa-play-circle text-green-600 mr-2"></i>
+                                            Auto-start tracking
+                                        </div>
+                                        <div class="text-sm text-muted-foreground">Start tracking when app launches</div>
                                     </div>
-                                </label>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="autoStart" aria-label="Auto start with system" checked
+                                            class="sr-only peer">
+                                        <div
+                                            class="relative w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-4 bg-accent rounded-lg">
+                                    <div class="space-y-1">
+                                        <div class="font-medium flex items-center">
+                                            <i class="fas fa-window-minimize text-blue-600 mr-2"></i>
+                                            Minimize to tray
+                                        </div>
+                                        <div class="text-sm text-muted-foreground">Keep running in system tray</div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="minimizeToTray" aria-label="Minimize to tray" checked
+                                            class="sr-only peer">
+                                        <div
+                                            class="relative w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-4 bg-accent rounded-lg">
+                                    <div class="space-y-1">
+                                        <div class="font-medium flex items-center">
+                                            <i class="fas fa-bell text-yellow-600 mr-2"></i>
+                                            Show notifications
+                                        </div>
+                                        <div class="text-sm text-muted-foreground">Display break reminders and alerts</div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="showNotifications" aria-label="Show notifications"
+                                            checked class="sr-only peer">
+                                        <div
+                                            class="relative w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-4 bg-accent rounded-lg">
+                                    <div class="space-y-1">
+                                        <div class="font-medium flex items-center">
+                                            <i class="fas fa-magic text-purple-600 mr-2"></i>
+                                            Auto categorization
+                                        </div>
+                                        <div class="text-sm text-muted-foreground">Automatically categorize applications using smart algorithms</div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="autoCategory" aria-label="Auto categorization" checked
+                                            class="sr-only peer">
+                                        <div
+                                            class="relative w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
-                            <div class="flex items-center justify-between">
-                                <div class="space-y-0.5">
-                                    <div class="font-medium">Minimize to tray</div>
-                                    <div class="text-sm text-muted-foreground">Keep running in system tray</div>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="minimizeToTray" aria-label="Minimize to tray" checked
-                                        class="sr-only peer">
-                                    <div
-                                        class="relative w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                        </div>
+                        
+                        <!-- Goals & Productivity -->
+                        <div class="card bg-card border border-border rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-6 flex items-center">
+                                <i class="fas fa-target text-muted-foreground mr-2"></i>
+                                Goals & Productivity
+                            </h3>
+                            <div class="space-y-6">
+                                <div class="space-y-3">
+                                    <label class="font-medium flex items-center">
+                                        <i class="fas fa-bullseye text-green-600 mr-2"></i>
+                                        Daily productivity goal
+                                    </label>
+                                    <div class="flex items-center space-x-3 p-3 bg-accent rounded-lg">
+                                        <input type="number"
+                                            class="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                            id="dailyGoal" value="8" min="1" max="24" aria-label="Daily goal hours">
+                                        <span class="text-sm text-muted-foreground font-medium">hours per day</span>
                                     </div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <div class="space-y-0.5">
-                                    <div class="font-medium">Show notifications</div>
-                                    <div class="text-sm text-muted-foreground">Display break reminders and alerts</div>
+                                    <div class="text-xs text-muted-foreground">Set your target productive hours for each day</div>
                                 </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="showNotifications" aria-label="Show notifications"
-                                        checked class="sr-only peer">
-                                    <div
-                                        class="relative w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                <div class="space-y-3">
+                                    <label class="font-medium flex items-center">
+                                        <i class="fas fa-coffee text-yellow-600 mr-2"></i>
+                                        Break reminder interval
+                                    </label>
+                                    <div class="flex items-center space-x-3 p-3 bg-accent rounded-lg">
+                                        <input type="number"
+                                            class="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                            id="breakReminder" value="60" min="15" max="180"
+                                            aria-label="Break reminder minutes">
+                                        <span class="text-sm text-muted-foreground font-medium">minutes</span>
                                     </div>
-                                </label>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <div class="space-y-0.5">
-                                    <div class="font-medium">Auto categorization</div>
-                                    <div class="text-sm text-muted-foreground">Automatically categorize applications
-                                        using AI</div>
+                                    <div class="text-xs text-muted-foreground">Get reminded to take breaks for better productivity</div>
                                 </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="autoCategory" aria-label="Auto categorization" checked
-                                        class="sr-only peer">
-                                    <div
-                                        class="relative w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                    <div class="flex items-center space-x-2 text-blue-700 dark:text-blue-300 mb-2">
+                                        <i class="fas fa-lightbulb"></i>
+                                        <span class="font-medium">Productivity Tip</span>
                                     </div>
-                                </label>
+                                    <p class="text-sm text-blue-600 dark:text-blue-400">
+                                        Research shows that taking regular breaks every 60-90 minutes can improve focus and productivity by up to 30%.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <!-- Goals Settings -->
+                    
+                    <!-- Privacy & Data -->
                     <div class="card bg-card border border-border rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-6">Goals</h3>
-                        <div class="space-y-6">
-                            <div class="space-y-2">
-                                <label class="font-medium">Daily productivity goal</label>
-                                <div class="flex items-center space-x-3">
-                                    <input type="number"
-                                        class="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                                        id="dailyGoal" value="8" min="1" max="24" aria-label="Daily goal hours">
-                                    <span class="text-sm text-muted-foreground">hours</span>
-                                </div>
-                            </div>
-                            <div class="space-y-2">
-                                <label class="font-medium">Break reminder interval</label>
-                                <div class="flex items-center space-x-3">
-                                    <input type="number"
-                                        class="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                                        id="breakReminder" value="60" min="15" max="180"
-                                        aria-label="Break reminder minutes">
-                                    <span class="text-sm text-muted-foreground">minutes</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Data Settings -->
-                    <div class="card bg-card border border-border rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-6">Data</h3>
+                        <h3 class="text-lg font-semibold mb-6 flex items-center">
+                            <i class="fas fa-shield-alt text-muted-foreground mr-2"></i>
+                            Privacy & Data Management
+                        </h3>
                         <div class="space-y-4">
-                            <div class="flex flex-wrap gap-3">
-                                <button
-                                    class="btn flex items-center space-x-2 px-4 py-2 border border-border bg-background hover:bg-secondary rounded-lg transition-colors"
-                                    id="exportSettings">
-                                    <i class="fas fa-download text-sm"></i>
-                                    <span>Export Settings</span>
-                                </button>
-                                <button
-                                    class="btn flex items-center space-x-2 px-4 py-2 border border-border bg-background hover:bg-secondary rounded-lg transition-colors"
-                                    id="importSettings">
-                                    <i class="fas fa-upload text-sm"></i>
-                                    <span>Import Settings</span>
-                                </button>
+                            <div class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                <div class="flex items-center space-x-2 text-green-700 dark:text-green-300 mb-2">
+                                    <i class="fas fa-lock"></i>
+                                    <span class="font-medium">Your Privacy Matters</span>
+                                </div>
+                                <p class="text-sm text-green-600 dark:text-green-400">
+                                    All your data is stored locally on your device. We never upload or share your activity data with any external services.
+                                </p>
                             </div>
-                            <div class="pt-4 border-t border-border">
-                                <button
-                                    class="btn flex items-center space-x-2 px-4 py-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg transition-colors"
-                                    id="clearData">
-                                    <i class="fas fa-trash text-sm"></i>
-                                    <span>Clear All Data</span>
-                                </button>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
+                                    <h4 class="font-medium mb-2 flex items-center">
+                                        <i class="fas fa-database text-blue-600 mr-2"></i>
+                                        Data Storage
+                                    </h4>
+                                    <p class="text-sm text-muted-foreground">Your activity data is stored in JSON files on your local machine for maximum privacy and control.</p>
+                                </div>
+                                <div class="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
+                                    <h4 class="font-medium mb-2 flex items-center">
+                                        <i class="fas fa-clock text-purple-600 mr-2"></i>
+                                        Data Retention
+                                    </h4>
+                                    <p class="text-sm text-muted-foreground">Activity data is kept for 7 days by default. Older data is automatically cleaned up to save space.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
