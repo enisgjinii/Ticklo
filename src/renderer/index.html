@@ -904,6 +904,15 @@
                                 </div>
                             </button>
                             <button
+                                class="btn flex items-center space-x-2 px-4 py-3 border border-border bg-background hover:bg-secondary rounded-lg transition-colors"
+                                id="openDataDir">
+                                <i class="fas fa-folder-open text-yellow-600"></i>
+                                <div class="text-left">
+                                    <div class="font-medium">Open Data Folder</div>
+                                    <div class="text-xs text-muted-foreground">Access app data files</div>
+                                </div>
+                            </button>
+                            <button
                                 class="btn flex items-center space-x-2 px-4 py-3 bg-destructive/10 border border-destructive/20 hover:bg-destructive/20 rounded-lg transition-colors"
                                 id="clearData">
                                 <i class="fas fa-trash text-destructive"></i>
@@ -1060,6 +1069,7 @@
                                         Data Storage
                                     </h4>
                                     <p class="text-sm text-muted-foreground">Your activity data is stored in JSON files on your local machine for maximum privacy and control.</p>
+                                    <p class="text-sm text-blue-500 mt-2">Data is now stored in the "data" folder in your app directory instead of AppData.</p>
                                 </div>
                                 <div class="p-4 border border-border rounded-lg hover:bg-accent transition-colors">
                                     <h4 class="font-medium mb-2 flex items-center">

@@ -44,7 +44,7 @@ let state = {
     isTracking: true,
     currentPage: 'dashboard',
     currentTimelineView: 'day',
-    debugMode: false,
+    debugMode: true, // Enable debug mode by default to help troubleshoot
     sessionStartTime: new Date(),
     // Enhanced state
     currentDate: new Date(),
@@ -96,6 +96,9 @@ const debug = {
 document.addEventListener('DOMContentLoaded', async () => {
     debug.log('Initializing Ticklo...');
     
+    // Make refresh function available globally immediately
+    window.refreshActivities = refreshActivities;
+    
     await loadSettings();
     await loadActivities();
     
@@ -123,6 +126,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     setInterval(checkBreakReminder, 60000);
     
     debug.log('Initialization complete', { settings: state.settings });
+    
+    // Log helpful message to console
+    console.log('🔧 Ticklo Debug: If activities are not showing, try refreshing with: refreshActivities()');
+    console.log('🔧 Current activities count:', state.activities.length);
+    
+    // Show notification about the data directory change
+    setTimeout(() => {
+        showToast('Data is now stored in the app directory. Click "Open Data Folder" in Settings to access it.', 'info', 8000);
+    }, 3000);
 });
 
 // Setup Event Listeners
@@ -333,10 +345,12 @@ function setupEventListeners() {
     document.getElementById('importSettings')?.addEventListener('click', importSettings);
     document.getElementById('clearData')?.addEventListener('click', clearAllData);
     
+    // Open Data Directory
+    document.getElementById('openDataDir')?.addEventListener('click', openDataDirectory);
+    
     // Refresh Button
-    document.getElementById('refreshBtn')?.addEventListener('click', () => {
-        updateUI();
-        showToast('Data refreshed', 'success');
+    document.getElementById('refreshBtn')?.addEventListener('click', async () => {
+        await refreshActivities();
     });
 
     // Floating Info Button
@@ -780,12 +794,12 @@ function updateStats() {
     const selectedDate = new Date(state.currentDate);
     selectedDate.setHours(0, 0, 0, 0);
     
-    const selectedActivities = getActivitiesForPeriod('today', state.currentDate);
+    const selectedActivities = getActivitiesForDate(state.currentDate);
     
     // Get yesterday's activities for comparison
     const yesterday = new Date(state.currentDate);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayActivities = getActivitiesForPeriod('today', yesterday);
+    const yesterdayActivities = getActivitiesForDate(yesterday);
     
     let totalTime = 0;
     let productiveTime = 0;
@@ -857,7 +871,7 @@ function updateTodayActivities() {
     const container = document.getElementById('todayActivities');
     if (!container) return;
     
-    const activities = getActivitiesForPeriod('today', state.currentDate).slice(-5).reverse();
+    const activities = getActivitiesForDate(state.currentDate);
     
     if (activities.length === 0) {
         const isToday = state.currentDate.toDateString() === new Date().toDateString();
@@ -903,7 +917,7 @@ function updateTopApplications() {
     if (!container) return;
     
     const appUsage = {};
-    const activities = getActivitiesForPeriod(state.selectedPeriod, state.currentDate);
+    const activities = getActivitiesForDate(state.currentDate);
     
     activities.forEach(activity => {
         const duration = activity.duration || 
@@ -1011,7 +1025,7 @@ function updateTimeline() {
     
     switch (state.currentTimelineView) {
         case 'day':
-            activities = getActivitiesForPeriod('today', state.currentDate);
+            activities = getActivitiesForDate(state.currentDate);
             break;
         case 'week':
             activities = getActivitiesForPeriod('week', state.currentDate);
@@ -1068,104 +1082,109 @@ function updateTimeline() {
     let timelineHTML = '';
     let previousEndPosition = 0;
     
-    activities.forEach((activity, index) => {
-        const activityStart = new Date(activity.startTime);
-        const activityEnd = activity.endTime ? new Date(activity.endTime) : new Date();
-        const duration = activityEnd - activityStart;
-        
-        // Calculate vertical position based on time
-        const startHour = activityStart.getHours();
-        const startMinutes = activityStart.getMinutes();
-        const endHour = activityEnd.getHours();
-        const endMinutes = activityEnd.getMinutes();
-        
-        const startPosition = (startHour * hourHeight) + (startMinutes / 60 * hourHeight);
-        const endPosition = (endHour * hourHeight) + (endMinutes / 60 * hourHeight);
-        const blockHeight = Math.max(20 * state.timeline.zoomLevel, endPosition - startPosition);
-        
-        // Add spacing if there's a gap between activities
-        const gap = startPosition - previousEndPosition;
-        if (gap > 10 && index > 0) {
+    const activityTracks = groupActivitiesForTimeline(activities);
+    const trackCount = activityTracks.length;
+    
+    activityTracks.forEach((track, trackIndex) => {
+        track.forEach(activity => {
+            const activityStart = new Date(activity.startTime);
+            const activityEnd = activity.endTime ? new Date(activity.endTime) : new Date();
+            const duration = activityEnd - activityStart;
+            
+            // Calculate vertical position based on time
+            const startHour = activityStart.getHours();
+            const startMinutes = activityStart.getMinutes();
+            const endHour = activityEnd.getHours();
+            const endMinutes = activityEnd.getMinutes();
+            
+            const startPosition = (startHour * hourHeight) + (startMinutes / 60 * hourHeight);
+            const endPosition = (endHour * hourHeight) + (endMinutes / 60 * hourHeight);
+            const blockHeight = Math.max(20 * state.timeline.zoomLevel, endPosition - startPosition);
+            
+            // Add spacing if there's a gap between activities
+            const gap = startPosition - previousEndPosition;
+            if (gap > 10 && index > 0) {
+                timelineHTML += `
+                    <div class="relative flex items-center py-2 timeline-gap" style="margin-top: ${gap}px;">
+                        <div class="absolute left-6 w-2 h-2 bg-muted rounded-full -ml-1"></div>
+                        <div class="ml-12 text-xs text-muted-foreground italic bg-background px-2 py-1 rounded-full border border-border/50 shadow-sm">
+                            <i class="fas fa-clock mr-1 opacity-50"></i>
+                            ${gap > hourHeight ? `${Math.round(gap / hourHeight)}h ${Math.round((gap % hourHeight) / hourHeight * 60)}m gap` : `${Math.round(gap / hourHeight * 60)}m gap`}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            const appIcon = getAppIcon(activity.app);
+            const iconHtml = appIcon ? 
+                `<img src="${appIcon}" alt="${activity.app}" class="w-6 h-6 rounded-sm mr-3 flex-shrink-0" />` : 
+                `<div class="w-6 h-6 bg-muted rounded-sm mr-3 flex-shrink-0 flex items-center justify-center">
+                    <i class="fas fa-${getCategoryIcon(activity.category)} text-xs text-muted-foreground"></i>
+                </div>`;
+            
+            const categoryColors = {
+                'productive': 'bg-gradient-to-r from-green-500 to-green-600 border-green-600 text-white shadow-green-100',
+                'break': 'bg-gradient-to-r from-yellow-500 to-yellow-600 border-yellow-600 text-white shadow-yellow-100',
+                'distracted': 'bg-gradient-to-r from-red-500 to-red-600 border-red-600 text-white shadow-red-100'
+            };
+            
+            const categoryIcons = {
+                'productive': 'code',
+                'break': 'coffee',
+                'distracted': 'mobile-alt'
+            };
+            
             timelineHTML += `
-                <div class="relative flex items-center py-2 timeline-gap" style="margin-top: ${gap}px;">
-                    <div class="absolute left-6 w-2 h-2 bg-muted rounded-full -ml-1"></div>
-                    <div class="ml-12 text-xs text-muted-foreground italic bg-background px-2 py-1 rounded-full border border-border/50 shadow-sm">
-                        <i class="fas fa-clock mr-1 opacity-50"></i>
-                        ${gap > hourHeight ? `${Math.round(gap / hourHeight)}h ${Math.round((gap % hourHeight) / hourHeight * 60)}m gap` : `${Math.round(gap / hourHeight * 60)}m gap`}
+                <div class="relative flex items-start group hover:scale-[1.02] transition-all duration-200" 
+                     style="margin-top: ${index === 0 ? startPosition : Math.max(0, startPosition - previousEndPosition)}px;">
+                    <!-- Timeline node -->
+                    <div class="absolute left-6 w-4 h-4 bg-primary rounded-full border-2 border-card shadow-sm -ml-2 mt-2 z-10 timeline-node"></div>
+                    
+                    <!-- Activity card -->
+                    <div class="ml-12 timeline-card ${categoryColors[activity.category] || 'bg-gradient-to-r from-gray-500 to-gray-600 border-gray-600 text-white shadow-gray-100'} 
+                         rounded-lg border-l-4 shadow-lg hover:shadow-xl cursor-pointer min-w-0 flex-1 activity-${activity.category}"
+                         style="min-height: ${blockHeight}px;"
+                         onclick="showActivityDetails('${activity.id}')"
+                         title="${activity.app} - ${activity.title || 'No title'} (${formatDuration(duration)})">
+                        
+                        <div class="p-4 h-full flex flex-col justify-between">
+                            <!-- Header -->
+                            <div class="flex items-center">
+                                ${state.timeline.zoomLevel >= 1 ? iconHtml : ''}
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <h4 class="font-semibold text-sm truncate">${activity.app}</h4>
+                                        <i class="fas fa-${categoryIcons[activity.category]} text-xs opacity-75"></i>
+                                    </div>
+                                    ${state.timeline.zoomLevel >= 1.5 && activity.title ? 
+                                        `<p class="text-xs opacity-90 truncate">${activity.title}</p>` : ''}
+                                </div>
+                                <div class="text-right flex-shrink-0 ml-3">
+                                    <div class="text-xs font-medium opacity-90">
+                                        ${formatDuration(duration)}
+                                    </div>
+                                    ${state.timeline.zoomLevel >= 1.5 ? 
+                                        `<div class="text-xs opacity-75">
+                                            ${activityStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>` : ''}
+                                </div>
+                            </div>
+                            
+                            <!-- Progress bar for longer activities -->
+                            ${blockHeight > 60 && state.timeline.zoomLevel >= 2 ? `
+                                <div class="mt-3">
+                                    <div class="w-full bg-white/20 rounded-full h-1">
+                                        <div class="bg-white h-1 rounded-full" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
                 </div>
             `;
-        }
-        
-        const appIcon = getAppIcon(activity.app);
-        const iconHtml = appIcon ? 
-            `<img src="${appIcon}" alt="${activity.app}" class="w-6 h-6 rounded-sm mr-3 flex-shrink-0" />` : 
-            `<div class="w-6 h-6 bg-muted rounded-sm mr-3 flex-shrink-0 flex items-center justify-center">
-                <i class="fas fa-${getCategoryIcon(activity.category)} text-xs text-muted-foreground"></i>
-            </div>`;
-        
-        const categoryColors = {
-            'productive': 'bg-gradient-to-r from-green-500 to-green-600 border-green-600 text-white shadow-green-100',
-            'break': 'bg-gradient-to-r from-yellow-500 to-yellow-600 border-yellow-600 text-white shadow-yellow-100',
-            'distracted': 'bg-gradient-to-r from-red-500 to-red-600 border-red-600 text-white shadow-red-100'
-        };
-        
-        const categoryIcons = {
-            'productive': 'code',
-            'break': 'coffee',
-            'distracted': 'mobile-alt'
-        };
-        
-        timelineHTML += `
-            <div class="relative flex items-start group hover:scale-[1.02] transition-all duration-200" 
-                 style="margin-top: ${index === 0 ? startPosition : Math.max(0, startPosition - previousEndPosition)}px;">
-                <!-- Timeline node -->
-                <div class="absolute left-6 w-4 h-4 bg-primary rounded-full border-2 border-card shadow-sm -ml-2 mt-2 z-10 timeline-node"></div>
-                
-                <!-- Activity card -->
-                <div class="ml-12 timeline-card ${categoryColors[activity.category] || 'bg-gradient-to-r from-gray-500 to-gray-600 border-gray-600 text-white shadow-gray-100'} 
-                     rounded-lg border-l-4 shadow-lg hover:shadow-xl cursor-pointer min-w-0 flex-1 activity-${activity.category}"
-                     style="min-height: ${blockHeight}px;"
-                     onclick="showActivityDetails('${activity.id}')"
-                     title="${activity.app} - ${activity.title || 'No title'} (${formatDuration(duration)})">
-                    
-                    <div class="p-4 h-full flex flex-col justify-between">
-                        <!-- Header -->
-                        <div class="flex items-center">
-                            ${state.timeline.zoomLevel >= 1 ? iconHtml : ''}
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-center space-x-2 mb-1">
-                                    <h4 class="font-semibold text-sm truncate">${activity.app}</h4>
-                                    <i class="fas fa-${categoryIcons[activity.category]} text-xs opacity-75"></i>
-                                </div>
-                                ${state.timeline.zoomLevel >= 1.5 && activity.title ? 
-                                    `<p class="text-xs opacity-90 truncate">${activity.title}</p>` : ''}
-                            </div>
-                            <div class="text-right flex-shrink-0 ml-3">
-                                <div class="text-xs font-medium opacity-90">
-                                    ${formatDuration(duration)}
-                                </div>
-                                ${state.timeline.zoomLevel >= 1.5 ? 
-                                    `<div class="text-xs opacity-75">
-                                        ${activityStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </div>` : ''}
-                            </div>
-                        </div>
-                        
-                        <!-- Progress bar for longer activities -->
-                        ${blockHeight > 60 && state.timeline.zoomLevel >= 2 ? `
-                            <div class="mt-3">
-                                <div class="w-full bg-white/20 rounded-full h-1">
-                                    <div class="bg-white h-1 rounded-full" style="width: 100%"></div>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        previousEndPosition = endPosition;
+            
+            previousEndPosition = endPosition;
+        });
     });
     
     activitiesContainer.innerHTML = timelineHTML;
@@ -2418,12 +2437,69 @@ async function saveActivities() {
 
 async function loadActivities() {
     try {
+        // Load saved activities from file
+        let savedActivities = [];
         if (fs.existsSync(activitiesFilePath)) {
             const data = fs.readFileSync(activitiesFilePath, 'utf8');
             const parsed = JSON.parse(data);
-            state.activities = parsed.activities || [];
-            debug.log('Activities loaded', { count: state.activities.length });
+            savedActivities = parsed.activities || [];
         }
+
+        // Get real-time activities from main process
+        let liveActivities = [];
+        try {
+            liveActivities = await ipcRenderer.invoke('get-activity-data') || [];
+        } catch (error) {
+            console.warn('Could not fetch live activities from main process:', error);
+        }
+
+        // Merge activities, avoiding duplicates
+        const allActivities = [...savedActivities];
+        const savedTimestamps = new Set(savedActivities.map(a => a.timestamp || a.startTime));
+        
+        // Add live activities that aren't already saved
+        liveActivities.forEach(liveActivity => {
+            if (!savedTimestamps.has(liveActivity.timestamp)) {
+                // Convert main process format to renderer format
+                const rendererActivity = {
+                    id: liveActivity.timestamp + '_live',
+                    app: liveActivity.app,
+                    title: liveActivity.title,
+                    appIcon: liveActivity.appIcon,
+                    appPath: liveActivity.appPath,
+                    category: getCategoryForApp(liveActivity.app, liveActivity.title),
+                    startTime: liveActivity.timestamp,
+                    endTime: null, // Will be calculated based on duration
+                    duration: liveActivity.duration,
+                    timestamp: liveActivity.timestamp,
+                    url: liveActivity.url
+                };
+                
+                // Calculate endTime if we have duration
+                if (liveActivity.duration) {
+                    rendererActivity.endTime = new Date(
+                        new Date(liveActivity.timestamp).getTime() + liveActivity.duration
+                    ).toISOString();
+                }
+                
+                allActivities.push(rendererActivity);
+            }
+        });
+
+        // Sort activities by start time
+        state.activities = allActivities.sort((a, b) => 
+            new Date(a.startTime || a.timestamp) - new Date(b.startTime || b.timestamp)
+        );
+        
+        debug.log('Activities loaded and merged', { 
+            saved: savedActivities.length,
+            live: liveActivities.length,
+            total: state.activities.length 
+        });
+        
+        // Save the merged activities back to file
+        await saveActivities();
+        
     } catch (error) {
         console.error('Error loading activities:', error);
     }
@@ -2538,30 +2614,36 @@ function getTodayActivities() {
     return activities;
 }
 
-function groupActivitiesByHour(activities) {
-    // Group activities into tracks to avoid overlaps
+function groupActivitiesForTimeline(activities) {
+    if (!activities || activities.length === 0) {
+        return [];
+    }
+
+    // Sort activities by start time
+    const sortedActivities = activities.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
     const tracks = [];
-    
-    activities.forEach(activity => {
+
+    sortedActivities.forEach(activity => {
         let placed = false;
-        
+        // Try to place the activity in an existing track
         for (const track of tracks) {
-            const lastActivity = track.activities[track.activities.length - 1];
-            const lastEnd = lastActivity.endTime ? 
-                new Date(lastActivity.endTime) : new Date();
+            const lastActivityInTrack = track[track.length - 1];
+            const lastEndTime = lastActivityInTrack.endTime ? new Date(lastActivityInTrack.endTime) : new Date(new Date(lastActivityInTrack.startTime).getTime() + (lastActivityInTrack.duration || 0));
             
-            if (new Date(activity.startTime) >= lastEnd) {
-                track.activities.push(activity);
+            if (new Date(activity.startTime) >= lastEndTime) {
+                track.push(activity);
                 placed = true;
                 break;
             }
         }
-        
+
+        // If it couldn't be placed, create a new track
         if (!placed) {
-            tracks.push({ activities: [activity] });
+            tracks.push([activity]);
         }
     });
-    
+
     return tracks;
 }
 
@@ -2660,37 +2742,6 @@ function updateDateDisplays() {
     document.getElementById('timelineCurrentDate').textContent = dateText;
 }
 
-// Enhanced activity filtering
-function getActivitiesForPeriod(period, date = state.currentDate) {
-    const targetDate = new Date(date);
-    
-    return state.activities.filter(activity => {
-        const activityDate = new Date(activity.startTime);
-        
-        switch (period) {
-            case 'today':
-                return activityDate.toDateString() === targetDate.toDateString();
-            case 'week': {
-                const startOfWeek = new Date(targetDate);
-                startOfWeek.setDate(targetDate.getDate() - targetDate.getDay());
-                startOfWeek.setHours(0, 0, 0, 0);
-                
-                const endOfWeek = new Date(startOfWeek);
-                endOfWeek.setDate(startOfWeek.getDate() + 6);
-                endOfWeek.setHours(23, 59, 59, 999);
-                
-                return activityDate >= startOfWeek && activityDate <= endOfWeek;
-            }
-            case 'month': {
-                return activityDate.getMonth() === targetDate.getMonth() && 
-                       activityDate.getFullYear() === targetDate.getFullYear();
-            }
-            default:
-                return true;
-        }
-    });
-}
-
 // Get app icon from cache
 function getAppIcon(appName) {
     return state.appIconCache.get(appName) || null;
@@ -2737,8 +2788,6 @@ function exportActivitiesToCSV() {
     
     showToast('Activities exported to CSV', 'success');
 }
-
-
 
 function checkBreakReminder() {
     if (!state.settings.showNotifications || !state.settings.breakReminder) return;
@@ -2906,7 +2955,7 @@ function hideModal(modalId) {
 }
 
 // Updated toast function for Basecoat UI
-function showToast(message, type = 'info') {
+function showToast(message, type = 'info', duration = 5000) {
     const container = document.getElementById('toastContainer');
     if (!container) return;
     
@@ -2932,12 +2981,79 @@ function showToast(message, type = 'info') {
     
     container.insertAdjacentHTML('beforeend', toastHtml);
     
-    // Auto-remove after 5 seconds
+    // Auto-remove after specified duration
     setTimeout(() => {
         const toast = document.getElementById(`toast-${toastId}`);
         if (toast) {
             toast.classList.add('animate-out', 'slide-out-to-right-5', 'fade-out-0');
             setTimeout(() => toast.remove(), 300);
         }
-    }, 5000);
+    }, duration);
 } 
+
+// Add manual refresh function after loadActivities
+async function refreshActivities() {
+    debug.log('Manually refreshing activities...');
+    await loadActivities();
+    updateUI();
+    showToast('Activities refreshed successfully', 'success');
+}
+
+// Export for global access
+window.refreshActivities = refreshActivities;
+
+// Function to open the data directory in file explorer
+async function openDataDirectory() {
+  try {
+    const dirPath = await ipcRenderer.invoke('open-data-directory');
+    showToast(`Opening data folder: ${dirPath}`, 'info');
+  } catch (error) {
+    console.error('Failed to open data directory:', error);
+    showToast('Failed to open data directory', 'error');
+  }
+}
+
+// Export for global access
+window.openDataDirectory = openDataDirectory;
+
+function getActivitiesForDate(targetDate) {
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return state.activities.filter(activity => {
+        const activityStart = new Date(activity.startTime);
+        return activityStart >= startOfDay && activityStart <= endOfDay;
+    });
+}
+
+// Function to get activities for different periods (week, month)
+function getActivitiesForPeriod(period, date = state.currentDate) {
+    const targetDate = new Date(date);
+    
+    return state.activities.filter(activity => {
+        const activityDate = new Date(activity.startTime);
+        
+        switch (period) {
+            case 'week': {
+                const startOfWeek = new Date(targetDate);
+                startOfWeek.setDate(targetDate.getDate() - targetDate.getDay());
+                startOfWeek.setHours(0, 0, 0, 0);
+                
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+                endOfWeek.setHours(23, 59, 59, 999);
+                
+                return activityDate >= startOfWeek && activityDate <= endOfWeek;
+            }
+            case 'month': {
+                return activityDate.getMonth() === targetDate.getMonth() && 
+                       activityDate.getFullYear() === targetDate.getFullYear();
+            }
+            default:
+                return true;
+        }
+    });
+}

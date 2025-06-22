@@ -63,7 +63,7 @@ function createTray() {
     }
   } catch (error) {
     // Create a simple colored square as fallback icon
-    trayIcon = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAFYSURBVDiNpZM9SwNBEIafgwiCYKGVjY2NlYWFhY2NjRYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhb+BwAAAAAAAAAAAAAAAAAA');
+    trayIcon = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAFYSURBVDiNpZM9SwNBEIafgwiCYKGVjY2NlYWFhY2NjRYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhb+BwAAAAAAAAAAAAAAAAAA');
   }
   
   tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
@@ -291,9 +291,39 @@ ipcMain.handle('delete-activity', (event, activityId) => {
   return false;
 });
 
+// IPC handler to open the data directory
+ipcMain.handle('open-data-directory', (event) => {
+  const appDirectory = path.join(process.cwd(), 'data');
+  if (!fs.existsSync(appDirectory)) {
+    fs.mkdirSync(appDirectory, { recursive: true });
+  }
+  
+  // Open the directory in file explorer
+  const { shell } = require('electron');
+  shell.openPath(appDirectory);
+  
+  return appDirectory;
+});
+
 // Get user data path for storing files
 ipcMain.on('get-user-data-path', (event) => {
-  event.returnValue = app.getPath('userData');
+  // Use app directory instead of default userData path
+  // This stores files in the app's directory rather than AppData
+  const appDirectory = path.join(process.cwd(), 'data');
+  
+  // Create the directory if it doesn't exist
+  if (!fs.existsSync(appDirectory)) {
+    try {
+      fs.mkdirSync(appDirectory, { recursive: true });
+    } catch (error) {
+      console.error('Failed to create data directory:', error);
+      // Fall back to default location if we can't create the directory
+      event.returnValue = app.getPath('userData');
+      return;
+    }
+  }
+  
+  event.returnValue = appDirectory;
 });
 
 // Handle active window requests
@@ -316,7 +346,44 @@ ipcMain.on('get-active-window', async (event) => {
   }
 });
 
+// Function to migrate existing data from default location to app directory
+function migrateDataIfNeeded() {
+  const defaultUserDataPath = app.getPath('userData');
+  const appDataDirectory = path.join(process.cwd(), 'data');
+  
+  // Create the directory if it doesn't exist
+  if (!fs.existsSync(appDataDirectory)) {
+    try {
+      fs.mkdirSync(appDataDirectory, { recursive: true });
+    } catch (error) {
+      console.error('Failed to create data directory:', error);
+      return;
+    }
+  }
+  
+  // Check for files to migrate
+  const filesToMigrate = ['settings.json', 'activities.json'];
+  
+  filesToMigrate.forEach(fileName => {
+    const sourcePath = path.join(defaultUserDataPath, fileName);
+    const destPath = path.join(appDataDirectory, fileName);
+    
+    // If the file exists in the default location but not in the app directory, copy it
+    if (fs.existsSync(sourcePath) && !fs.existsSync(destPath)) {
+      try {
+        fs.copyFileSync(sourcePath, destPath);
+        console.log(`Migrated ${fileName} from ${sourcePath} to ${destPath}`);
+      } catch (error) {
+        console.error(`Error migrating ${fileName}:`, error);
+      }
+    }
+  });
+}
+
 app.whenReady().then(async () => {
+  // Migrate data from default location
+  migrateDataIfNeeded();
+  
   createWindow();
   createTray();
   
