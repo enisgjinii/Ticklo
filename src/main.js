@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 // Dynamic import for get-windows ES module
 let activeWindow;
@@ -13,6 +14,7 @@ let tray;
 let isTracking = false;
 let activityData = [];
 let trackingInterval;
+let appIconCache = new Map();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -98,6 +100,45 @@ function createTray() {
   });
 }
 
+// Get app icon and cache it
+async function getAppIcon(appName, appPath) {
+  if (appIconCache.has(appName)) {
+    return appIconCache.get(appName);
+  }
+
+  try {
+    let iconPath = null;
+    
+    if (process.platform === 'win32') {
+      // For Windows, try to get the executable icon
+      if (appPath && fs.existsSync(appPath)) {
+        const icon = await app.getFileIcon(appPath, { size: 'normal' });
+        if (icon && !icon.isEmpty()) {
+          iconPath = icon.toDataURL();
+        }
+      }
+    } else if (process.platform === 'darwin') {
+      // For macOS, try to get app bundle icon
+      try {
+        const icon = await app.getFileIcon(appPath || '', { size: 'normal' });
+        if (icon && !icon.isEmpty()) {
+          iconPath = icon.toDataURL();
+        }
+      } catch (error) {
+        // Fallback for macOS
+      }
+    }
+
+    // Cache the result (even if null)
+    appIconCache.set(appName, iconPath);
+    return iconPath;
+  } catch (error) {
+    console.error(`Error getting icon for ${appName}:`, error);
+    appIconCache.set(appName, null);
+    return null;
+  }
+}
+
 async function trackActivity() {
   try {
     // Wait for activeWindow to be loaded
@@ -108,10 +149,16 @@ async function trackActivity() {
     const window = await activeWindow();
     if (window && window.owner && window.title) {
       const timestamp = new Date().toISOString();
+      
+      // Get app icon
+      const appIcon = await getAppIcon(window.owner.name, window.owner.path);
+      
       const activity = {
         timestamp,
         title: window.title,
         app: window.owner.name,
+        appPath: window.owner.path,
+        appIcon: appIcon,
         url: window.url || null,
         duration: 1000 // 1 second intervals
       };
@@ -130,13 +177,18 @@ async function trackActivity() {
 
       // Send update to renderer
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('activity-update', activity);
+        mainWindow.webContents.send('window-focus-changed', {
+          app: activity.app,
+          title: activity.title,
+          appIcon: activity.appIcon,
+          appPath: activity.appPath
+        });
       }
 
-      // Keep only last 24 hours of data
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      // Keep only last 7 days of data
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       activityData = activityData.filter(item => 
-        new Date(item.timestamp) > twentyFourHoursAgo
+        new Date(item.timestamp) > sevenDaysAgo
       );
     }
   } catch (error) {
@@ -207,6 +259,10 @@ ipcMain.handle('get-activity-data', () => {
   return activityData;
 });
 
+ipcMain.handle('get-app-icon', async (event, appName, appPath) => {
+  return await getAppIcon(appName, appPath);
+});
+
 ipcMain.handle('toggle-tracking', () => {
   toggleTracking();
   return isTracking;
@@ -247,9 +303,12 @@ ipcMain.on('get-active-window', async (event) => {
   try {
     const window = await activeWindow();
     if (window && window.owner && window.title) {
+      const appIcon = await getAppIcon(window.owner.name, window.owner.path);
       event.reply('window-focus-changed', {
         app: window.owner.name,
-        title: window.title
+        title: window.title,
+        appIcon: appIcon,
+        appPath: window.owner.path
       });
     }
   } catch (error) {

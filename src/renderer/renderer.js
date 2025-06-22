@@ -47,7 +47,22 @@ let state = {
     currentTimelineView: 'day',
     debugMode: false,
     sessionStartTime: new Date(),
-    autoCategorizer: new AutoCategorizer()
+    autoCategorizer: new AutoCategorizer(),
+    // Enhanced state
+    currentDate: new Date(),
+    selectedPeriod: 'today', // for dashboard filters
+    activitiesFilter: {
+        search: '',
+        category: '',
+        dateRange: 'today'
+    },
+    pagination: {
+        currentPage: 1,
+        entriesPerPage: 25,
+        totalEntries: 0
+    },
+    appIconCache: new Map(),
+    uiScale: 'md' // 'sm', 'md', 'lg'
 };
 
 // Debug Console
@@ -85,7 +100,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupIPCListeners();
     
     applyTheme();
-    updateUI();
+    applyUIScale();
+    
+    // Initialize the default page (dashboard)
+    switchPage('dashboard');
     
     // Start tracking if enabled
     if (state.settings.autoStart && state.isTracking) {
@@ -106,9 +124,95 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Setup Event Listeners
 function setupEventListeners() {
-    // Sidebar Toggle
-    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('collapsed');
+    // Enhanced theme switching
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const theme = btn.dataset.theme;
+            state.settings.theme = theme;
+            
+            // Update active state
+            document.querySelectorAll('.theme-btn').forEach(b => {
+                b.classList.remove('bg-primary', 'text-primary-foreground');
+                b.classList.add('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
+            });
+            btn.classList.remove('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
+            btn.classList.add('bg-primary', 'text-primary-foreground');
+            
+            applyTheme();
+            saveSettings();
+        });
+    });
+
+    // UI Scale switching
+    document.querySelectorAll('.scale-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const scale = btn.dataset.scale;
+            state.uiScale = scale;
+            
+            // Update active state
+            document.querySelectorAll('.scale-btn').forEach(b => {
+                b.classList.remove('bg-primary', 'text-primary-foreground');
+                b.classList.add('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
+            });
+            btn.classList.remove('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
+            btn.classList.add('bg-primary', 'text-primary-foreground');
+            
+            applyUIScale();
+            saveSettings();
+        });
+    });
+
+    // Modal handling
+    document.querySelectorAll('[data-modal-close]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const modalId = btn.dataset.modalClose;
+            hideModal(modalId);
+        });
+    });
+
+    // Close modal when clicking outside
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('fixed') && e.target.classList.contains('inset-0')) {
+            const modal = e.target;
+            if (modal.id && modal.id.includes('Modal')) {
+                hideModal(modal.id);
+            }
+        }
+    });
+
+    // Date navigation
+    document.getElementById('prevDate')?.addEventListener('click', () => {
+        navigateDate(-1);
+    });
+    
+    document.getElementById('nextDate')?.addEventListener('click', () => {
+        navigateDate(1);
+    });
+    
+    document.getElementById('timelinePrevDate')?.addEventListener('click', () => {
+        navigateDate(-1);
+    });
+    
+    document.getElementById('timelineNextDate')?.addEventListener('click', () => {
+        navigateDate(1);
+    });
+
+    // Period filter buttons
+    document.querySelectorAll('.filter-btn[data-period]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const period = btn.dataset.period;
+            state.selectedPeriod = period;
+            
+            // Update active state
+            document.querySelectorAll('.filter-btn[data-period]').forEach(b => {
+                b.classList.remove('bg-primary', 'text-primary-foreground');
+                b.classList.add('text-muted-foreground', 'hover:bg-background', 'hover:text-foreground');
+            });
+            btn.classList.remove('text-muted-foreground', 'hover:bg-background', 'hover:text-foreground');
+            btn.classList.add('bg-primary', 'text-primary-foreground');
+            
+            updateTopApplications();
+        });
     });
     
     // Tracking Toggle
@@ -148,20 +252,41 @@ function setupEventListeners() {
         exportData();
     });
     
-    // Theme Toggle
-    document.getElementById('darkModeToggle')?.addEventListener('click', () => {
-        const themes = ['light', 'dark', 'system'];
-        const currentIndex = themes.indexOf(state.settings.theme);
-        state.settings.theme = themes[(currentIndex + 1) % themes.length];
-        applyTheme();
-        saveSettings();
+    // Activities table controls
+    document.getElementById('activitySearch')?.addEventListener('input', (e) => {
+        state.activitiesFilter.search = e.target.value;
+        state.pagination.currentPage = 1;
+        updateActivitiesTable();
+    });
+
+    document.getElementById('categoryFilter')?.addEventListener('change', (e) => {
+        state.activitiesFilter.category = e.target.value;
+        state.pagination.currentPage = 1;
+        updateActivitiesTable();
+    });
+
+    document.getElementById('dateFilter')?.addEventListener('change', (e) => {
+        state.activitiesFilter.dateRange = e.target.value;
+        state.pagination.currentPage = 1;
+        updateActivitiesTable();
+    });
+
+    document.getElementById('entriesPerPage')?.addEventListener('change', (e) => {
+        state.pagination.entriesPerPage = parseInt(e.target.value);
+        state.pagination.currentPage = 1;
+        updateActivitiesTable();
+    });
+
+    document.getElementById('exportActivitiesBtn')?.addEventListener('click', () => {
+        exportActivitiesToCSV();
     });
     
     // Debug Console Toggle
     document.getElementById('consoleToggle')?.addEventListener('click', () => {
         const console = document.getElementById('debugConsole');
-        console.classList.toggle('open');
-        state.debugMode = console.classList.contains('open');
+        console.classList.toggle('hidden');
+        state.debugMode = !console.classList.contains('hidden');
+        debug.log(`Debug console ${state.debugMode ? 'opened' : 'closed'}`);
     });
     
     // Add Activity Form
@@ -210,9 +335,18 @@ function setupEventListeners() {
     document.querySelectorAll('.toggle-btn[data-view]').forEach(btn => {
         btn.addEventListener('click', () => {
             state.currentTimelineView = btn.dataset.view;
+            
+            // Update active state
             document.querySelectorAll('.toggle-btn[data-view]').forEach(b => {
-                b.classList.toggle('active', b === btn);
+                if (b === btn) {
+                    b.classList.remove('text-muted-foreground', 'hover:bg-background', 'hover:text-foreground');
+                    b.classList.add('bg-primary', 'text-primary-foreground');
+                } else {
+                    b.classList.remove('bg-primary', 'text-primary-foreground');
+                    b.classList.add('text-muted-foreground', 'hover:bg-background', 'hover:text-foreground');
+                }
             });
+            
             updateTimeline();
         });
     });
@@ -280,7 +414,7 @@ function stopTracking() {
 }
 
 function handleActivityChange(windowData) {
-    const { app, title } = windowData;
+    const { app, title, appIcon, appPath } = windowData;
     
     // Check if this is a new activity
     if (state.currentActivity && 
@@ -299,11 +433,18 @@ function handleActivityChange(windowData) {
         id: generateId(),
         app: app,
         title: title,
+        appIcon: appIcon,
+        appPath: appPath,
         category: getCategoryForApp(app, title),
         startTime: new Date().toISOString(),
         endTime: null,
         duration: 0
     };
+
+    // Cache the app icon
+    if (appIcon && app) {
+        state.appIconCache.set(app, appIcon);
+    }
     
     debug.log('Activity changed', state.currentActivity);
     updateUI();
@@ -396,19 +537,58 @@ function updateRealTimeElements() {
         sessionTime.textContent = formatDuration(duration);
     }
     
-    // Update current date
-    const currentDate = document.getElementById('currentDate');
-    if (currentDate) {
-        currentDate.textContent = new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-    }
+    // Update today's stats in sidebar
+    updateTodayStats();
+    
+    // Update date displays
+    updateDateDisplays();
     
     // Update timeline current time indicator
     updateCurrentTimeIndicator();
+}
+
+function updateTodayStats() {
+    const todayActivities = getActivitiesForPeriod('today', new Date());
+    
+    let totalTime = 0;
+    let productiveTime = 0;
+    
+    todayActivities.forEach(activity => {
+        const duration = activity.duration || 
+            (activity === state.currentActivity ? 
+                new Date() - new Date(activity.startTime) : 0);
+        
+        totalTime += duration;
+        
+        if (activity.category === 'productive') {
+            productiveTime += duration;
+        }
+    });
+    
+    // Include current activity if it's today and productive
+    if (state.currentActivity) {
+        const currentDuration = new Date() - new Date(state.currentActivity.startTime);
+        const activityDate = new Date(state.currentActivity.startTime);
+        const today = new Date();
+        
+        if (activityDate.toDateString() === today.toDateString()) {
+            totalTime += currentDuration;
+            if (state.currentActivity.category === 'productive') {
+                productiveTime += currentDuration;
+            }
+        }
+    }
+    
+    const todayTotalTimeEl = document.getElementById('todayTotalTime');
+    const todayProductiveTimeEl = document.getElementById('todayProductiveTime');
+    
+    if (todayTotalTimeEl) {
+        todayTotalTimeEl.textContent = formatDuration(totalTime);
+    }
+    
+    if (todayProductiveTimeEl) {
+        todayProductiveTimeEl.textContent = formatDuration(productiveTime);
+    }
 }
 
 function updateDashboard() {
@@ -419,19 +599,25 @@ function updateDashboard() {
 }
 
 function updateStats() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(state.currentDate);
+    selectedDate.setHours(0, 0, 0, 0);
     
-    const todayActivities = getTodayActivities();
+    const selectedActivities = getActivitiesForPeriod('today', state.currentDate);
+    
+    // Get yesterday's activities for comparison
+    const yesterday = new Date(state.currentDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayActivities = getActivitiesForPeriod('today', yesterday);
     
     let totalTime = 0;
     let productiveTime = 0;
     let breakTime = 0;
     let distractedTime = 0;
     
-    todayActivities.forEach(activity => {
+    selectedActivities.forEach(activity => {
         const duration = activity.duration || 
-            (activity === state.currentActivity ? 
+            (activity === state.currentActivity && 
+             new Date(activity.startTime).toDateString() === selectedDate.toDateString() ? 
                 new Date() - new Date(activity.startTime) : 0);
         
         totalTime += duration;
@@ -449,11 +635,33 @@ function updateStats() {
         }
     });
     
+    // Calculate yesterday's total for comparison
+    let yesterdayTotalTime = 0;
+    yesterdayActivities.forEach(activity => {
+        yesterdayTotalTime += activity.duration || 0;
+    });
+    
+    // Calculate percentage change
+    let changePercent = 0;
+    if (yesterdayTotalTime > 0) {
+        changePercent = Math.round(((totalTime - yesterdayTotalTime) / yesterdayTotalTime) * 100);
+    } else if (totalTime > 0) {
+        changePercent = 100;
+    }
+    
     // Update displays
     document.getElementById('totalTime').textContent = formatDuration(totalTime);
     document.getElementById('productiveTime').textContent = formatDuration(productiveTime);
     document.getElementById('breakTime').textContent = formatDuration(breakTime);
     document.getElementById('distractedTime').textContent = formatDuration(distractedTime);
+    
+    // Update percentage change
+    const changeEl = document.getElementById('totalTimeChange');
+    if (changeEl) {
+        const isPositive = changePercent >= 0;
+        changeEl.innerHTML = `<i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i> ${isPositive ? '+' : ''}${changePercent}% from yesterday`;
+        changeEl.style.color = isPositive ? 'var(--success)' : 'var(--danger)';
+    }
     
     // Update progress bars
     if (totalTime > 0) {
@@ -471,29 +679,45 @@ function updateTodayActivities() {
     const container = document.getElementById('todayActivities');
     if (!container) return;
     
-    const activities = getTodayActivities().slice(-5).reverse();
+    const activities = getActivitiesForPeriod('today', state.currentDate).slice(-5).reverse();
     
     if (activities.length === 0) {
+        const isToday = state.currentDate.toDateString() === new Date().toDateString();
         container.innerHTML = `
-            <div class="text-center py-4">
-                <p class="text-muted">No activities tracked today</p>
+            <div class="text-center py-8">
+                <i class="fas fa-calendar-times text-muted-foreground text-2xl mb-2"></i>
+                <p class="text-muted-foreground text-sm">No activities tracked ${isToday ? 'today' : 'for this day'}</p>
             </div>
         `;
         return;
     }
     
-    container.innerHTML = activities.map(activity => `
-        <div class="activity-item">
-            <div class="activity-icon">
-                <i class="fas fa-${getCategoryIcon(activity.category)}"></i>
+    container.innerHTML = activities.map(activity => {
+        const appIcon = getAppIcon(activity.app);
+        const iconHtml = appIcon ? 
+            `<img src="${appIcon}" alt="${activity.app}" class="w-8 h-8 rounded" />` : 
+            `<div class="w-8 h-8 flex items-center justify-center rounded bg-muted"><i class="fas fa-${getCategoryIcon(activity.category)} text-muted-foreground"></i></div>`;
+        
+        const categoryColor = {
+            'productive': 'text-green-600',
+            'break': 'text-yellow-600', 
+            'distracted': 'text-red-600'
+        }[activity.category] || 'text-muted-foreground';
+            
+        return `
+            <div class="flex items-center space-x-3 p-3 rounded-lg hover:bg-secondary transition-colors">
+                ${iconHtml}
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium truncate">${activity.app}</p>
+                    <p class="text-sm text-muted-foreground truncate">${activity.title || 'No title'}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-medium">${formatDuration(activity.duration || 0)}</p>
+                    <p class="text-xs ${categoryColor}">${activity.category}</p>
+                </div>
             </div>
-            <div class="activity-info">
-                <div class="activity-app">${activity.app}</div>
-                <div class="activity-title">${activity.title || 'No title'}</div>
-            </div>
-            <div class="activity-time">${formatDuration(activity.duration || 0)}</div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function updateTopApplications() {
@@ -501,11 +725,12 @@ function updateTopApplications() {
     if (!container) return;
     
     const appUsage = {};
-    const activities = getTodayActivities();
+    const activities = getActivitiesForPeriod(state.selectedPeriod, state.currentDate);
     
     activities.forEach(activity => {
         const duration = activity.duration || 
-            (activity === state.currentActivity ? 
+            (activity === state.currentActivity && 
+             new Date(activity.startTime).toDateString() === state.currentDate.toDateString() ? 
                 new Date() - new Date(activity.startTime) : 0);
         
         if (!appUsage[activity.app]) {
@@ -521,22 +746,46 @@ function updateTopApplications() {
         .sort(([, a], [, b]) => b.time - a.time)
         .slice(0, 5);
     
+    if (sortedApps.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fas fa-desktop text-muted-foreground text-2xl mb-2"></i>
+                <p class="text-muted-foreground text-sm">No applications tracked</p>
+            </div>
+        `;
+        return;
+    }
+    
     const totalTime = sortedApps.reduce((sum, [, data]) => sum + data.time, 0);
     
-    container.innerHTML = sortedApps.map(([app, data]) => {
-        const percentage = totalTime > 0 ? (data.time / totalTime * 100).toFixed(1) : 0;
+    container.innerHTML = sortedApps.map(([app, data], index) => {
+        const percentage = totalTime > 0 ? Math.round((data.time / totalTime) * 100) : 0;
+        const appIcon = getAppIcon(app);
+        const iconHtml = appIcon ? 
+            `<img src="${appIcon}" alt="${app}" class="w-10 h-10 rounded" />` : 
+            `<div class="w-10 h-10 flex items-center justify-center rounded bg-muted"><i class="fas fa-${getCategoryIcon(data.category)} text-muted-foreground"></i></div>`;
+        
+        const categoryColor = {
+            'productive': 'bg-green-500',
+            'break': 'bg-yellow-500', 
+            'distracted': 'bg-red-500'
+        }[data.category] || 'bg-gray-500';
         
         return `
-            <div class="app-item">
-                <div class="app-icon">
-                    <i class="fas fa-${getCategoryIcon(data.category)}"></i>
-                </div>
-                <div class="app-info">
-                    <div class="app-name">${app}</div>
-                    <div class="app-usage">
-                        <span class="app-time">${formatDuration(data.time)}</span>
-                        <span class="app-percentage">${percentage}%</span>
+            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-secondary transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        ${iconHtml}
+                        <div class="absolute -bottom-1 -right-1 w-3 h-3 ${categoryColor} rounded-full border-2 border-background"></div>
                     </div>
+                    <div>
+                        <p class="font-medium">${app}</p>
+                        <p class="text-sm text-muted-foreground">${formatDuration(data.time)}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm font-medium">${percentage}%</div>
+                    <div class="text-xs text-muted-foreground">#${index + 1}</div>
                 </div>
             </div>
         `;
@@ -575,62 +824,106 @@ function updateGoalProgress() {
 }
 
 function updateTimeline() {
-    const container = document.getElementById('timelineBody');
-    if (!container) return;
+    const hoursContainer = document.getElementById('timelineHours');
+    const activitiesContainer = document.getElementById('timelineActivities');
+    
+    if (!hoursContainer || !activitiesContainer) return;
     
     let activities = [];
-    const now = new Date();
     
     switch (state.currentTimelineView) {
         case 'day':
-            activities = getTodayActivities();
+            activities = getActivitiesForPeriod('today', state.currentDate);
             break;
         case 'week':
-            const weekStart = new Date(now);
-            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-            weekStart.setHours(0, 0, 0, 0);
-            activities = state.activities.filter(a => new Date(a.startTime) >= weekStart);
+            activities = getActivitiesForPeriod('week', state.currentDate);
             break;
         case 'month':
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            activities = state.activities.filter(a => new Date(a.startTime) >= monthStart);
+            activities = getActivitiesForPeriod('month', state.currentDate);
             break;
     }
     
+    // Generate hour labels (24 hours)
+    const hours = Array.from({length: 24}, (_, i) => {
+        return `
+            <div class="h-16 px-3 py-2 text-xs text-muted-foreground border-b border-border flex items-center justify-center">
+                ${i.toString().padStart(2, '0')}:00
+            </div>
+        `;
+    }).join('');
+    
+    hoursContainer.innerHTML = hours;
+    
     if (activities.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-5">
-                <p class="text-muted">No activities in this time period</p>
+        activitiesContainer.innerHTML = `
+            <div class="flex items-center justify-center h-64">
+                <div class="text-center">
+                    <i class="fas fa-calendar-times text-muted-foreground text-3xl mb-3"></i>
+                    <p class="text-muted-foreground">No activities in this time period</p>
+                </div>
             </div>
         `;
         return;
     }
     
-    const tracks = groupActivitiesByHour(activities);
-    
-    container.innerHTML = tracks.map(track => {
-        const blocks = track.activities.map(activity => {
-            const startTime = new Date(activity.startTime);
-            const endTime = activity.endTime ? new Date(activity.endTime) : new Date();
-            const duration = endTime - startTime;
+    // Generate 24 hour segments
+    const segments = Array.from({length: 24}, (_, hour) => {
+        // Find activities that occur in this hour
+        const hourActivities = activities.filter(activity => {
+            const activityStart = new Date(activity.startTime);
+            const activityEnd = activity.endTime ? new Date(activity.endTime) : new Date();
+            const activityHour = activityStart.getHours();
             
-            const startHour = startTime.getHours();
-            const startMinutes = startTime.getMinutes();
-            const startPercent = ((startHour + startMinutes / 60) / 24) * 100;
-            const widthPercent = Math.max((duration / (24 * 60 * 60 * 1000)) * 100, 0.5);
+            // Check if activity spans into this hour
+            return activityHour === hour || 
+                   (activityStart.getHours() < hour && activityEnd.getHours() >= hour);
+        });
+        
+        // Create activity blocks for this hour
+        const blocks = hourActivities.map((activity, index) => {
+            const activityStart = new Date(activity.startTime);
+            const activityEnd = activity.endTime ? new Date(activity.endTime) : new Date();
+            
+            // Calculate position within the hour
+            const startMinutes = activityStart.getHours() === hour ? activityStart.getMinutes() : 0;
+            const endMinutes = activityEnd.getHours() === hour ? activityEnd.getMinutes() : 60;
+            
+            const left = (startMinutes / 60) * 100;
+            const width = ((endMinutes - startMinutes) / 60) * 100;
+            const top = index * 28; // Stack overlapping activities
+            
+            const duration = activityEnd - activityStart;
+            const appIcon = getAppIcon(activity.app);
+            const iconHtml = appIcon ? 
+                `<img src="${appIcon}" alt="${activity.app}" class="w-4 h-4 rounded mr-2" />` : 
+                `<i class="fas fa-${getCategoryIcon(activity.category)} text-sm mr-2"></i>`;
+            
+            const categoryColors = {
+                'productive': 'bg-green-500 border-green-600 text-white',
+                'break': 'bg-yellow-500 border-yellow-600 text-white',
+                'distracted': 'bg-red-500 border-red-600 text-white'
+            };
             
             return `
-                <div class="timeline-block ${activity.category}" 
-                     style="left: ${startPercent}%; width: ${widthPercent}%"
-                     title="${activity.app} - ${formatDuration(duration)}">
-                    ${activity.app}
+                <div class="absolute px-2 py-1 text-xs rounded border-l-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${categoryColors[activity.category] || 'bg-gray-500 border-gray-600 text-white'}" 
+                     style="left: ${left}%; width: ${width}%; top: ${top}px; min-height: 24px;"
+                     title="${activity.app} - ${activity.title || 'No title'} (${formatDuration(duration)})">
+                    <div class="flex items-center">
+                        ${iconHtml}
+                        <span class="truncate">${activity.app}</span>
+                    </div>
                 </div>
             `;
         }).join('');
         
-        return `<div class="timeline-track">${blocks}</div>`;
+        return `
+            <div class="relative h-16 border-b border-border bg-background hover:bg-muted/20 transition-colors">
+                ${blocks}
+            </div>
+        `;
     }).join('');
     
+    activitiesContainer.innerHTML = segments;
     updateCurrentTimeIndicator();
 }
 
@@ -639,102 +932,316 @@ function updateCurrentTimeIndicator() {
     if (!indicator) return;
     
     const now = new Date();
+    const isToday = state.currentDate.toDateString() === now.toDateString();
+    
+    if (!isToday || state.currentPage !== 'timeline') {
+        indicator.classList.add('hidden');
+        return;
+    }
+    
+    indicator.classList.remove('hidden');
+    
     const hours = now.getHours();
     const minutes = now.getMinutes();
-    const percentage = ((hours + minutes / 60) / 24) * 100;
     
-    indicator.style.left = `${percentage}%`;
+    // Calculate vertical position based on hour and minute (64px per hour segment)
+    const segmentHeight = 64; // Height of each hour segment (h-16 = 64px)
+    const headerHeight = 56; // Height of the header
+    const topPosition = headerHeight + hours * segmentHeight + (minutes / 60) * segmentHeight;
+    
+    indicator.style.top = `${topPosition}px`;
 }
 
 function updateActivitiesTable() {
     const container = document.getElementById('activitiesTable');
+    const tableInfo = document.getElementById('tableInfo');
+    const paginationContainer = document.getElementById('paginationControls');
+    
     if (!container) return;
     
-    const activities = state.activities.slice().reverse();
+    // Filter activities based on search and filters
+    let filteredActivities = state.activities.filter(activity => {
+        // Date range filter
+        const activityDate = new Date(activity.startTime);
+        const now = new Date();
+        
+        switch (state.activitiesFilter.dateRange) {
+            case 'today':
+                if (activityDate.toDateString() !== now.toDateString()) return false;
+                break;
+            case 'week': {
+                const weekStart = new Date(now);
+                weekStart.setDate(now.getDate() - 7);
+                if (activityDate < weekStart) return false;
+                break;
+            }
+            case 'month': {
+                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                if (activityDate < monthStart) return false;
+                break;
+            }
+        }
+        
+        // Category filter
+        if (state.activitiesFilter.category && activity.category !== state.activitiesFilter.category) {
+            return false;
+        }
+        
+        // Search filter
+        if (state.activitiesFilter.search) {
+            const search = state.activitiesFilter.search.toLowerCase();
+            const matchesApp = activity.app.toLowerCase().includes(search);
+            const matchesTitle = (activity.title || '').toLowerCase().includes(search);
+            if (!matchesApp && !matchesTitle) return false;
+        }
+        
+        return true;
+    });
     
-    if (activities.length === 0) {
-        container.innerHTML = '<p class="text-center py-4">No activities recorded</p>';
+    // Sort by start time (newest first)
+    filteredActivities.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+    
+    // Update total entries count
+    state.pagination.totalEntries = filteredActivities.length;
+    
+    // Calculate pagination
+    const totalPages = Math.ceil(filteredActivities.length / state.pagination.entriesPerPage);
+    state.pagination.currentPage = Math.min(state.pagination.currentPage, Math.max(1, totalPages));
+    
+    const startIndex = (state.pagination.currentPage - 1) * state.pagination.entriesPerPage;
+    const endIndex = startIndex + state.pagination.entriesPerPage;
+    const pageActivities = filteredActivities.slice(startIndex, endIndex);
+    
+    // Update table info
+    if (tableInfo) {
+        const showing = filteredActivities.length === 0 ? 0 : startIndex + 1;
+        const to = Math.min(endIndex, filteredActivities.length);
+        tableInfo.textContent = `Showing ${showing} to ${to} of ${filteredActivities.length} entries`;
+    }
+    
+    if (pageActivities.length === 0) {
+        container.innerHTML = '<p class="text-center py-4">No activities found</p>';
+        updatePagination(0);
         return;
     }
     
     container.innerHTML = `
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Application</th>
-                    <th>Title</th>
-                    <th>Category</th>
-                    <th>Start Time</th>
-                    <th>Duration</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${activities.map(activity => `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-border">
+                <thead class="bg-muted/50">
                     <tr>
-                        <td>${activity.app}</td>
-                        <td>${activity.title || '-'}</td>
-                        <td>
-                            <span class="badge bg-${getCategoryColor(activity.category)}">
-                                ${activity.category}
-                            </span>
-                        </td>
-                        <td>${new Date(activity.startTime).toLocaleString()}</td>
-                        <td>${formatDuration(activity.duration)}</td>
-                        <td>
-                            <button class="btn btn-sm btn-danger" onclick="deleteActivity('${activity.id}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Application</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Title</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Start Time</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Duration</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                     </tr>
-                `).join('')}
-            </tbody>
-        </table>
+                </thead>
+                <tbody class="bg-background divide-y divide-border">
+                    ${pageActivities.map(activity => {
+                        const appIcon = getAppIcon(activity.app);
+                        const iconHtml = appIcon ? 
+                            `<img src="${appIcon}" alt="${activity.app}" class="w-5 h-5 rounded mr-3" />` : 
+                            `<div class="w-5 h-5 flex items-center justify-center rounded bg-muted mr-3"><i class="fas fa-${getCategoryIcon(activity.category)} text-xs text-muted-foreground"></i></div>`;
+                        
+                        const categoryColors = {
+                            'productive': 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
+                            'break': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
+                            'distracted': 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                        };
+                        
+                        return `
+                            <tr class="hover:bg-muted/50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        ${iconHtml}
+                                        <span class="font-medium">${activity.app}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 max-w-xs truncate text-sm text-muted-foreground">${activity.title || '-'}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${categoryColors[activity.category] || 'bg-gray-100 text-gray-800'}">
+                                        ${activity.category}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">${new Date(activity.startTime).toLocaleString()}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${formatDuration(activity.duration)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <button class="text-red-600 hover:text-red-800 p-1 rounded transition-colors" 
+                                            onclick="deleteActivity('${activity.id}')" 
+                                            title="Delete activity">
+                                        <i class="fas fa-trash text-sm"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
     `;
+    
+    updatePagination(totalPages);
 }
 
+function updatePagination(totalPages) {
+    const container = document.getElementById('paginationControls');
+    if (!container || totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    const currentPage = state.pagination.currentPage;
+    const maxVisiblePages = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    let paginationHTML = '';
+    
+    // Previous button
+    paginationHTML += `
+        <button class="px-3 py-2 text-sm border border-border rounded-md bg-background hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${currentPage === 1 ? 'cursor-not-allowed opacity-50' : ''}" 
+                onclick="goToPage(${currentPage - 1})" 
+                ${currentPage === 1 ? 'disabled' : ''}>
+            <i class="fas fa-chevron-left"></i>
+        </button>
+    `;
+    
+    // First page
+    if (startPage > 1) {
+        paginationHTML += `
+            <button class="px-3 py-2 text-sm border border-border rounded-md bg-background hover:bg-secondary transition-colors" onclick="goToPage(1)">1</button>
+        `;
+        if (startPage > 2) {
+            paginationHTML += '<span class="px-3 py-2 text-sm text-muted-foreground">...</span>';
+        }
+    }
+    
+    // Page numbers
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `
+            <button class="px-3 py-2 text-sm border border-border rounded-md transition-colors ${i === currentPage ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-secondary'}" 
+                    onclick="goToPage(${i})">
+                ${i}
+            </button>
+        `;
+    }
+    
+    // Last page
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            paginationHTML += '<span class="px-3 py-2 text-sm text-muted-foreground">...</span>';
+        }
+        paginationHTML += `
+            <button class="px-3 py-2 text-sm border border-border rounded-md bg-background hover:bg-secondary transition-colors" onclick="goToPage(${totalPages})">${totalPages}</button>
+        `;
+    }
+    
+    // Next button
+    paginationHTML += `
+        <button class="px-3 py-2 text-sm border border-border rounded-md bg-background hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${currentPage === totalPages ? 'cursor-not-allowed opacity-50' : ''}" 
+                onclick="goToPage(${currentPage + 1})" 
+                ${currentPage === totalPages ? 'disabled' : ''}>
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    `;
+    
+    container.innerHTML = paginationHTML;
+}
+
+// Global function for pagination
+window.goToPage = function(page) {
+    if (page >= 1 && page <= Math.ceil(state.pagination.totalEntries / state.pagination.entriesPerPage)) {
+        state.pagination.currentPage = page;
+        updateActivitiesTable();
+    }
+};
+
 function updateAnalytics() {
-    // This would be implemented with charts
-    const container = document.querySelector('#analyticsPage .page-content');
+    const container = document.getElementById('analyticsContent');
     if (!container) return;
     
     const stats = calculateAnalytics();
     
     container.innerHTML = `
-        <div class="analytics-grid">
-            <div class="analytics-card">
-                <h3>Weekly Overview</h3>
-                <div class="chart-placeholder">
-                    <p>Total Time: ${formatDuration(stats.weekTotal)}</p>
-                    <p>Daily Average: ${formatDuration(stats.dailyAverage)}</p>
-                    <p>Most Productive Day: ${stats.mostProductiveDay}</p>
-                </div>
-            </div>
-            
-            <div class="analytics-card">
-                <h3>Category Distribution</h3>
-                <div class="category-stats">
-                    <div class="category-stat">
-                        <span class="category-label">Productive</span>
-                        <span class="category-value">${stats.productivePercent}%</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="card bg-card border border-border rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fas fa-chart-line text-blue-600 mr-2"></i>
+                    Weekly Overview
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-muted-foreground">Total Time:</span>
+                        <span class="font-semibold">${formatDuration(stats.weekTotal)}</span>
                     </div>
-                    <div class="category-stat">
-                        <span class="category-label">Break</span>
-                        <span class="category-value">${stats.breakPercent}%</span>
+                    <div class="flex justify-between">
+                        <span class="text-muted-foreground">Daily Average:</span>
+                        <span class="font-semibold">${formatDuration(stats.dailyAverage)}</span>
                     </div>
-                    <div class="category-stat">
-                        <span class="category-label">Distracted</span>
-                        <span class="category-value">${stats.distractedPercent}%</span>
+                    <div class="flex justify-between">
+                        <span class="text-muted-foreground">Most Productive Day:</span>
+                        <span class="font-semibold">${stats.mostProductiveDay}</span>
                     </div>
                 </div>
             </div>
             
-            <div class="analytics-card">
-                <h3>Productivity Trends</h3>
-                <div class="trend-info">
-                    <p>This week vs last week: ${stats.weekTrend > 0 ? '+' : ''}${stats.weekTrend}%</p>
-                    <p>Best productivity time: ${stats.bestHour}</p>
-                    <p>Average session length: ${formatDuration(stats.avgSessionLength)}</p>
+            <div class="card bg-card border border-border rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fas fa-chart-pie text-green-600 mr-2"></i>
+                    Category Distribution
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                            <span class="text-muted-foreground">Productive</span>
+                        </div>
+                        <span class="font-semibold text-green-600">${stats.productivePercent}%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
+                            <span class="text-muted-foreground">Break</span>
+                        </div>
+                        <span class="font-semibold text-yellow-600">${stats.breakPercent}%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
+                            <span class="text-muted-foreground">Distracted</span>
+                        </div>
+                        <span class="font-semibold text-red-600">${stats.distractedPercent}%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card bg-card border border-border rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fas fa-trending-up text-purple-600 mr-2"></i>
+                    Productivity Trends
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-muted-foreground">Week vs Last Week:</span>
+                        <span class="font-semibold ${stats.weekTrend >= 0 ? 'text-green-600' : 'text-red-600'}">
+                            ${stats.weekTrend > 0 ? '+' : ''}${stats.weekTrend}%
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-muted-foreground">Best Time:</span>
+                        <span class="font-semibold">${stats.bestHour}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-muted-foreground">Avg Session:</span>
+                        <span class="font-semibold">${formatDuration(stats.avgSessionLength)}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -742,7 +1249,7 @@ function updateAnalytics() {
 }
 
 function updateCategories() {
-    const container = document.querySelector('#categoriesPage .page-content');
+    const container = document.getElementById('categoriesContent');
     if (!container) return;
     
     const categories = ['productive', 'break', 'distracted'];
@@ -754,31 +1261,48 @@ function updateCategories() {
         categoryApps[category].push(app);
     });
     
+    const categoryColors = {
+        'productive': { bg: 'bg-green-100 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', text: 'text-green-800 dark:text-green-200', icon: 'text-green-600' },
+        'break': { bg: 'bg-yellow-100 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800', text: 'text-yellow-800 dark:text-yellow-200', icon: 'text-yellow-600' },
+        'distracted': { bg: 'bg-red-100 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', text: 'text-red-800 dark:text-red-200', icon: 'text-red-600' }
+    };
+    
     container.innerHTML = `
-        <div class="categories-container">
-            ${categories.map(category => `
-                <div class="category-section">
-                    <div class="category-header">
-                        <h3>
-                            <i class="fas fa-${getCategoryIcon(category)}"></i>
-                            ${category.charAt(0).toUpperCase() + category.slice(1)}
-                        </h3>
-                        <button class="btn-primary btn-sm" onclick="addAppToCategory('${category}')">
-                            <i class="fas fa-plus"></i> Add App
-                        </button>
+        <div class="space-y-6">
+            ${categories.map(category => {
+                const colors = categoryColors[category];
+                return `
+                    <div class="card bg-card border border-border rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold flex items-center">
+                                <i class="fas fa-${getCategoryIcon(category)} ${colors.icon} mr-3"></i>
+                                ${category.charAt(0).toUpperCase() + category.slice(1)}
+                            </h3>
+                            <button class="btn flex items-center space-x-2 px-3 py-1 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors" 
+                                    onclick="addAppToCategory('${category}')">
+                                <i class="fas fa-plus text-sm"></i>
+                                <span>Add App</span>
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            ${(categoryApps[category] || []).map(app => `
+                                <div class="inline-flex items-center px-3 py-1 ${colors.bg} ${colors.border} border rounded-full ${colors.text}">
+                                    <span class="text-sm">${app}</span>
+                                    <button class="ml-2 hover:bg-black/10 rounded p-0.5 transition-colors" 
+                                            onclick="removeAppFromCategory('${app}')" 
+                                            title="Remove ${app}">
+                                        <i class="fas fa-times text-xs"></i>
+                                    </button>
+                                </div>
+                            `).join('')}
+                            ${(categoryApps[category] || []).length === 0 ? 
+                                `<p class="text-muted-foreground text-sm italic">No apps categorized as ${category}</p>` : 
+                                ''
+                            }
+                        </div>
                     </div>
-                    <div class="category-apps">
-                        ${(categoryApps[category] || []).map(app => `
-                            <div class="app-tag">
-                                <span>${app}</span>
-                                <button class="remove-btn" onclick="removeAppFromCategory('${app}')">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('')}
+                `;
+            }).join('')}
         </div>
     `;
 }
@@ -811,109 +1335,55 @@ function updateTrackingStatus() {
 
 // Page Navigation
 function switchPage(pageName) {
-    // Update navigation
+    // Update navigation state
     document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.toggle('active', link.dataset.page === pageName);
+        if (link.dataset.page === pageName) {
+            link.classList.remove('text-muted-foreground', 'hover:bg-secondary', 'hover:text-foreground');
+            link.classList.add('bg-primary', 'text-primary-foreground', 'hover:bg-primary/90');
+        } else {
+            link.classList.remove('bg-primary', 'text-primary-foreground', 'hover:bg-primary/90');
+            link.classList.add('text-muted-foreground', 'hover:bg-secondary', 'hover:text-foreground');
+        }
     });
     
-    // Show page
+    // Hide all pages
     document.querySelectorAll('.page').forEach(page => {
-        page.classList.remove('active');
+        page.classList.add('hidden');
+        page.classList.remove('flex');
     });
     
+    // Show target page
     const targetPage = document.getElementById(`${pageName}Page`);
     if (targetPage) {
-        targetPage.classList.add('active');
+        targetPage.classList.remove('hidden');
+        targetPage.classList.add('flex');
         state.currentPage = pageName;
         updateUI();
+        debug.log(`Switched to ${pageName} page`);
+    } else {
+        debug.log(`Page ${pageName}Page not found`);
     }
 }
 
 // Manual Activity Entry
 function showAddActivityModal() {
-    // Use modal manager if available
-    if (window.ModalManager) {
-        // Register the modal if not already registered
-        if (!window.ModalManager.modals.has('addActivityModal')) {
-            const modalHTML = `
-                <div class="modal fade" id="addActivityModal" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Add Manual Activity</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <form id="addActivityForm">
-                                    <div class="form-group">
-                                        <label for="activityApp">Application</label>
-                                        <input type="text" class="form-control" id="activityApp" name="app" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="activityTitle">Activity Title</label>
-                                        <input type="text" class="form-control" id="activityTitle" name="title" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="activityCategory">Category</label>
-                                        <select class="form-control" id="activityCategory" name="category" required>
-                                            <option value="productive">Productive</option>
-                                            <option value="break">Break</option>
-                                            <option value="distracted">Distracted</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="activityStartTime">Start Time</label>
-                                        <input type="datetime-local" class="form-control" id="activityStartTime" name="startTime" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="activityDuration">Duration (minutes)</label>
-                                        <input type="number" class="form-control" id="activityDuration" name="duration" min="1" required>
-                                    </div>
-                                </form>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" form="addActivityForm" class="btn-primary">Add Activity</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            window.ModalManager.registerModal('addActivityModal', modalHTML);
-        }
-        
-        window.ModalManager.showModal('addActivityModal');
-        return;
+    showModal('addActivityModal');
+    
+    // Pre-fill current time
+    const now = new Date();
+    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+    
+    const startTimeInput = document.getElementById('activityStartTime');
+    const durationInput = document.getElementById('activityDuration');
+    
+    if (startTimeInput) {
+        startTimeInput.value = localDateTime;
     }
-    
-    // Fallback to original method
-    const modalElement = document.getElementById('addActivityModal');
-    if (!modalElement) {
-        console.error('Add activity modal not found');
-        showToast('Modal not available', 'error');
-        return;
+    if (durationInput) {
+        durationInput.value = 30;
     }
-    
-    const modal = new bootstrap.Modal(modalElement);
-    
-    // Set default values
-    const form = document.getElementById('addActivityForm');
-    if (form) {
-        const now = new Date();
-        const startTime = new Date(now - 30 * 60 * 1000); // 30 minutes ago
-        
-        const startTimeInput = form.querySelector('[name="startTime"]');
-        const durationInput = form.querySelector('[name="duration"]');
-        
-        if (startTimeInput) {
-            startTimeInput.value = startTime.toISOString().slice(0, 16);
-        }
-        if (durationInput) {
-            durationInput.value = 30;
-        }
-    }
-    
-    modal.show();
 }
 
 async function handleAddActivity(e) {
@@ -939,9 +1409,7 @@ async function handleAddActivity(e) {
     updateUI();
     
     // Close modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('addActivityModal'));
-    modal.hide();
-    e.target.reset();
+    hideModal('addActivityModal');
     
     showToast('Activity added successfully', 'success');
     debug.log('Manual activity added', activity);
@@ -1007,9 +1475,10 @@ function calculateAnalytics() {
 // Data Management
 async function saveSettings() {
     try {
-        // Include auto categorizer patterns in settings
+        // Include auto categorizer patterns and UI preferences in settings
         const settingsToSave = {
             ...state.settings,
+            uiScale: state.uiScale,
             autoCategorizerData: state.autoCategorizer ? state.autoCategorizer.exportUserPatterns() : null
         };
         
@@ -1029,6 +1498,11 @@ async function loadSettings() {
             
             // Load settings
             state.settings = { ...state.settings, ...loadedData };
+            
+            // Load UI preferences
+            if (loadedData.uiScale) {
+                state.uiScale = loadedData.uiScale;
+            }
             
             // Load auto categorizer patterns
             if (loadedData.autoCategorizerData && state.autoCategorizer) {
@@ -1239,48 +1713,147 @@ function applyTheme() {
             break;
     }
     
-    document.body.classList.toggle('dark-mode', isDark);
+    document.documentElement.classList.toggle('dark', isDark);
     
-    // Update theme button icon
-    const icon = document.querySelector('#darkModeToggle i');
-    if (icon) {
-        if (state.settings.theme === 'system') {
-            icon.className = 'fas fa-adjust';
-        } else if (isDark) {
-            icon.className = 'fas fa-sun';
+    // Update theme button states
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        if (btn.dataset.theme === state.settings.theme) {
+            btn.classList.remove('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
+            btn.classList.add('bg-primary', 'text-primary-foreground');
         } else {
-            icon.className = 'fas fa-moon';
+            btn.classList.remove('bg-primary', 'text-primary-foreground');
+            btn.classList.add('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
         }
-    }
+    });
+    
+    // Update scale button states
+    document.querySelectorAll('.scale-btn').forEach(btn => {
+        if (btn.dataset.scale === state.uiScale) {
+            btn.classList.remove('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
+            btn.classList.add('bg-primary', 'text-primary-foreground');
+        } else {
+            btn.classList.remove('bg-primary', 'text-primary-foreground');
+            btn.classList.add('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
+        }
+    });
+    
+    debug.log('Theme applied:', state.settings.theme);
 }
 
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
+// Date Navigation
+function navigateDate(direction) {
+    const currentDate = new Date(state.currentDate);
+    currentDate.setDate(currentDate.getDate() + direction);
+    state.currentDate = currentDate;
     
-    const toastId = generateId();
-    const toastHtml = `
-        <div class="toast" id="toast-${toastId}" role="alert">
-            <div class="toast-header">
-                <strong class="me-auto">${type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info'}</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body">
-                ${message}
-            </div>
-        </div>
-    `;
+    updateDateDisplays();
+    updateUI();
+}
+
+function updateDateDisplays() {
+    const today = new Date();
+    const isToday = state.currentDate.toDateString() === today.toDateString();
+    const isYesterday = state.currentDate.toDateString() === new Date(today.getTime() - 86400000).toDateString();
+    const isTomorrow = state.currentDate.toDateString() === new Date(today.getTime() + 86400000).toDateString();
     
-    container.insertAdjacentHTML('beforeend', toastHtml);
+    let dateText;
+    if (isToday) {
+        dateText = 'Today';
+    } else if (isYesterday) {
+        dateText = 'Yesterday';
+    } else if (isTomorrow) {
+        dateText = 'Tomorrow';
+    } else {
+        dateText = state.currentDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
     
-    const toastElement = document.getElementById(`toast-${toastId}`);
-    const toast = new bootstrap.Toast(toastElement);
-    toast.show();
+    document.getElementById('currentDate').textContent = dateText;
+    document.getElementById('timelineCurrentDate').textContent = dateText;
+}
+
+// Enhanced activity filtering
+function getActivitiesForPeriod(period, date = state.currentDate) {
+    const targetDate = new Date(date);
     
-    toastElement.addEventListener('hidden.bs.toast', () => {
-        toastElement.remove();
+    return state.activities.filter(activity => {
+        const activityDate = new Date(activity.startTime);
+        
+        switch (period) {
+            case 'today':
+                return activityDate.toDateString() === targetDate.toDateString();
+            case 'week': {
+                const startOfWeek = new Date(targetDate);
+                startOfWeek.setDate(targetDate.getDate() - targetDate.getDay());
+                startOfWeek.setHours(0, 0, 0, 0);
+                
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+                endOfWeek.setHours(23, 59, 59, 999);
+                
+                return activityDate >= startOfWeek && activityDate <= endOfWeek;
+            }
+            case 'month': {
+                return activityDate.getMonth() === targetDate.getMonth() && 
+                       activityDate.getFullYear() === targetDate.getFullYear();
+            }
+            default:
+                return true;
+        }
     });
 }
+
+// Get app icon from cache
+function getAppIcon(appName) {
+    return state.appIconCache.get(appName) || null;
+}
+
+// Enhanced CSV export
+function exportActivitiesToCSV() {
+    const activities = state.activities.filter(activity => {
+        // Filter based on current filter settings
+        if (state.activitiesFilter.category && activity.category !== state.activitiesFilter.category) {
+            return false;
+        }
+        
+        if (state.activitiesFilter.search) {
+            const search = state.activitiesFilter.search.toLowerCase();
+            return activity.app.toLowerCase().includes(search) || 
+                   activity.title.toLowerCase().includes(search);
+        }
+        
+        return true;
+    });
+    
+    const headers = ['Date', 'Time', 'Application', 'Title', 'Category', 'Duration (minutes)'];
+    const rows = activities.map(activity => [
+        new Date(activity.startTime).toLocaleDateString(),
+        new Date(activity.startTime).toLocaleTimeString(),
+        activity.app,
+        activity.title,
+        activity.category,
+        Math.round((activity.duration || 0) / (1000 * 60))
+    ]);
+    
+    const csvContent = [headers, ...rows]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ticklo-activities-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showToast('Activities exported to CSV', 'success');
+}
+
+
 
 function checkBreakReminder() {
     if (!state.settings.showNotifications || !state.settings.breakReminder) return;
@@ -1407,3 +1980,79 @@ window.reinitializeEventListeners = function() {
 window.getComponentLoaderStatus = function() {
     return window.ComponentLoader ? window.ComponentLoader.getComponentInfo() : null;
 }; 
+
+// UI Scale Management
+function applyUIScale() {
+    const body = document.getElementById('appBody');
+    if (!body) return;
+    
+    // Remove existing scale classes
+    body.classList.remove('scale-sm', 'scale-md', 'scale-lg');
+    
+    // Apply new scale class
+    body.classList.add(`scale-${state.uiScale}`);
+    
+    debug.log(`UI scale changed to: ${state.uiScale}`);
+}
+
+// Modal Management
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hidden');
+        // Focus trap for accessibility
+        const firstInput = modal.querySelector('input, select, textarea, button');
+        if (firstInput) {
+            firstInput.focus();
+        }
+    }
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+        // Reset form if it exists
+        const form = modal.querySelector('form');
+        if (form) {
+            form.reset();
+        }
+    }
+}
+
+// Updated toast function for Basecoat UI
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    
+    const toastId = generateId();
+    const iconClass = type === 'success' ? 'fa-check-circle text-green-500' : 
+                      type === 'error' ? 'fa-exclamation-triangle text-red-500' : 
+                      type === 'warning' ? 'fa-exclamation-triangle text-yellow-500' :
+                      'fa-info-circle text-blue-500';
+    
+    const toastHtml = `
+        <div class="bg-card border border-border rounded-lg shadow-lg p-4 max-w-sm animate-in slide-in-from-right-5 fade-in-0 duration-300" id="toast-${toastId}">
+            <div class="flex items-center space-x-3">
+                <i class="fas ${iconClass}"></i>
+                <div class="flex-1">
+                    <p class="text-sm font-medium">${message}</p>
+                </div>
+                <button class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-secondary transition-colors" onclick="document.getElementById('toast-${toastId}').remove()">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        const toast = document.getElementById(`toast-${toastId}`);
+        if (toast) {
+            toast.classList.add('animate-out', 'slide-out-to-right-5', 'fade-out-0');
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 5000);
+} 
