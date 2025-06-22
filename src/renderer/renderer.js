@@ -127,47 +127,80 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Setup Event Listeners
 function setupEventListeners() {
-    // Enhanced theme switching
+    // Navigation menu
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const page = link.dataset.page;
+            if (page) switchPage(page);
+        });
+    });
+
+    // Tracking toggle
+    document.getElementById('trackingToggle')?.addEventListener('change', (e) => {
+        state.isTracking = e.target.checked;
+        if (state.isTracking) {
+            startTracking();
+            showToast('Time tracking started', 'success');
+        } else {
+            stopTracking();
+            showToast('Time tracking stopped', 'info');
+        }
+    });
+
+    // Theme switcher
     document.querySelectorAll('.theme-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const theme = btn.dataset.theme;
-            state.settings.theme = theme;
+            state.settings.theme = btn.dataset.theme;
             
             // Update active state
             document.querySelectorAll('.theme-btn').forEach(b => {
-                b.classList.remove('bg-primary', 'text-primary-foreground');
-                b.classList.add('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
+                if (b === btn) {
+                    b.classList.remove('bg-secondary', 'text-secondary-foreground');
+                    b.classList.add('bg-primary', 'text-primary-foreground');
+                } else {
+                    b.classList.remove('bg-primary', 'text-primary-foreground');
+                    b.classList.add('bg-secondary', 'text-secondary-foreground');
+                }
             });
-            btn.classList.remove('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
-            btn.classList.add('bg-primary', 'text-primary-foreground');
             
             applyTheme();
             saveSettings();
         });
     });
 
-    // UI Scale switching
+    // UI Scale switcher
     document.querySelectorAll('.scale-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const scale = btn.dataset.scale;
-            state.uiScale = scale;
+            state.uiScale = btn.dataset.scale;
             
             // Update active state
             document.querySelectorAll('.scale-btn').forEach(b => {
-                b.classList.remove('bg-primary', 'text-primary-foreground');
-                b.classList.add('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
+                if (b === btn) {
+                    b.classList.remove('bg-secondary', 'text-secondary-foreground');
+                    b.classList.add('bg-primary', 'text-primary-foreground');
+                } else {
+                    b.classList.remove('bg-primary', 'text-primary-foreground');
+                    b.classList.add('bg-secondary', 'text-secondary-foreground');
+                }
             });
-            btn.classList.remove('bg-secondary', 'text-secondary-foreground', 'hover:bg-secondary/80');
-            btn.classList.add('bg-primary', 'text-primary-foreground');
             
             applyUIScale();
-            saveSettings();
         });
     });
 
-    // Modal handling
+    // Add Activity Modal
+    document.getElementById('addActivityBtn')?.addEventListener('click', showAddActivityModal);
+    document.getElementById('addManualActivity')?.addEventListener('click', showAddActivityModal);
+    document.getElementById('addActivityForm')?.addEventListener('submit', handleAddActivity);
+
+    // Export Data
+    document.getElementById('exportDataBtn')?.addEventListener('click', exportData);
+    document.getElementById('exportActivitiesBtn')?.addEventListener('click', exportActivitiesToCSV);
+
+    // Modal close handlers
     document.querySelectorAll('[data-modal-close]').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
             const modalId = btn.dataset.modalClose;
             hideModal(modalId);
         });
@@ -218,84 +251,32 @@ function setupEventListeners() {
         });
     });
     
-    // Tracking Toggle
-    document.getElementById('trackingToggle')?.addEventListener('change', (e) => {
-        state.isTracking = e.target.checked;
-        if (state.isTracking) {
-            startTracking();
-        } else {
-            stopTracking();
-        }
-        updateTrackingStatus();
-        debug.log('Tracking toggled', { isTracking: state.isTracking });
-    });
-    
-    // Navigation
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = link.dataset.page;
-            if (page) {
-                switchPage(page);
-            }
-        });
-    });
-    
-    // Quick Actions
-    document.getElementById('addActivityBtn')?.addEventListener('click', () => {
-        showAddActivityModal();
-    });
-    
-    // Add Activity button in activities page
-    document.getElementById('addManualActivity')?.addEventListener('click', () => {
-        showAddActivityModal();
-    });
-    
-    document.getElementById('exportDataBtn')?.addEventListener('click', () => {
-        exportData();
-    });
-    
-    // Activities table controls
+    // Activities page filters
     document.getElementById('activitySearch')?.addEventListener('input', (e) => {
         state.activitiesFilter.search = e.target.value;
         state.pagination.currentPage = 1;
         updateActivitiesTable();
     });
-
+    
     document.getElementById('categoryFilter')?.addEventListener('change', (e) => {
         state.activitiesFilter.category = e.target.value;
         state.pagination.currentPage = 1;
         updateActivitiesTable();
     });
-
+    
     document.getElementById('dateFilter')?.addEventListener('change', (e) => {
         state.activitiesFilter.dateRange = e.target.value;
         state.pagination.currentPage = 1;
         updateActivitiesTable();
     });
-
+    
     document.getElementById('entriesPerPage')?.addEventListener('change', (e) => {
         state.pagination.entriesPerPage = parseInt(e.target.value);
         state.pagination.currentPage = 1;
         updateActivitiesTable();
     });
 
-    document.getElementById('exportActivitiesBtn')?.addEventListener('click', () => {
-        exportActivitiesToCSV();
-    });
-    
-    // Debug Console Toggle
-    document.getElementById('consoleToggle')?.addEventListener('click', () => {
-        const console = document.getElementById('debugConsole');
-        console.classList.toggle('hidden');
-        state.debugMode = !console.classList.contains('hidden');
-        debug.log(`Debug console ${state.debugMode ? 'opened' : 'closed'}`);
-    });
-    
-    // Add Activity Form
-    document.getElementById('addActivityForm')?.addEventListener('submit', handleAddActivity);
-    
-    // Settings
+    // Settings inputs
     document.getElementById('autoStart')?.addEventListener('change', (e) => {
         state.settings.autoStart = e.target.checked;
         saveSettings();
@@ -314,13 +295,6 @@ function setupEventListeners() {
     document.getElementById('autoCategory')?.addEventListener('change', (e) => {
         state.settings.autoCategory = e.target.checked;
         saveSettings();
-        debug.log('Auto categorization setting changed:', e.target.checked);
-        
-        if (e.target.checked) {
-            showToast('Auto categorization enabled - apps will be categorized automatically', 'success');
-        } else {
-            showToast('Auto categorization disabled - manual categories only', 'info');
-        }
     });
     
     document.getElementById('dailyGoal')?.addEventListener('input', (e) => {
@@ -364,6 +338,158 @@ function setupEventListeners() {
         updateUI();
         showToast('Data refreshed', 'success');
     });
+
+    // Floating Info Button
+    document.getElementById('keyboardShortcutsBtn')?.addEventListener('click', () => {
+        showModal('keyboardShortcutsModal');
+    });
+
+    // Global Keyboard Shortcuts
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+}
+
+// Enhanced Keyboard Shortcuts Handler
+function handleKeyboardShortcuts(e) {
+    // Don't trigger shortcuts when typing in inputs
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        // Allow Ctrl+A, Ctrl+C, Ctrl+V, etc. in inputs
+        if (!e.ctrlKey && !e.metaKey) return;
+        if (e.key === 'a' || e.key === 'c' || e.key === 'v' || e.key === 'x' || e.key === 'z') return;
+    }
+
+    const isCtrl = e.ctrlKey || e.metaKey;
+    const key = e.key.toLowerCase();
+
+    // Handle Escape key
+    if (key === 'escape') {
+        e.preventDefault();
+        // Close any open modals
+        document.querySelectorAll('.fixed.inset-0:not(.hidden)').forEach(modal => {
+            if (modal.id && modal.id.includes('Modal')) {
+                hideModal(modal.id);
+            }
+        });
+        return;
+    }
+
+    // Handle ? key for shortcuts
+    if (key === '?' && !isCtrl) {
+        e.preventDefault();
+        showModal('keyboardShortcutsModal');
+        return;
+    }
+
+    // Navigation shortcuts (Ctrl + Number)
+    if (isCtrl) {
+        switch (key) {
+            case '1':
+                e.preventDefault();
+                switchPage('dashboard');
+                break;
+            case '2':
+                e.preventDefault();
+                switchPage('timeline');
+                break;
+            case '3':
+                e.preventDefault();
+                switchPage('analytics');
+                break;
+            case '4':
+                e.preventDefault();
+                switchPage('activities');
+                break;
+            case '5':
+                e.preventDefault();
+                switchPage('categories');
+                break;
+            case '6':
+                e.preventDefault();
+                switchPage('settings');
+                break;
+            case 'n':
+                e.preventDefault();
+                showAddActivityModal();
+                break;
+            case 'e':
+                e.preventDefault();
+                exportData();
+                break;
+            case 't':
+                e.preventDefault();
+                const toggle = document.getElementById('trackingToggle');
+                if (toggle) {
+                    toggle.checked = !toggle.checked;
+                    toggle.dispatchEvent(new Event('change'));
+                }
+                break;
+            case 'f':
+                e.preventDefault();
+                const searchInput = document.getElementById('activitySearch');
+                if (searchInput && state.currentPage === 'activities') {
+                    searchInput.focus();
+                }
+                break;
+            case 'm':
+                e.preventDefault();
+                // Focus mode - hide sidebar
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) {
+                    sidebar.classList.toggle('hidden');
+                    showToast(sidebar.classList.contains('hidden') ? 'Focus mode enabled' : 'Focus mode disabled', 'info');
+                }
+                break;
+        }
+        return;
+    }
+
+    // Timeline-specific shortcuts (only when on timeline page)
+    if (state.currentPage === 'timeline') {
+        switch (key) {
+            case 'arrowleft':
+                e.preventDefault();
+                navigateDate(-1);
+                break;
+            case 'arrowright':
+                e.preventDefault();
+                navigateDate(1);
+                break;
+            case '+':
+            case '=':
+                e.preventDefault();
+                const currentZoom = state.timeline.zoomLevel;
+                const zoomLevels = [0.5, 1, 2, 4];
+                const currentIndex = zoomLevels.indexOf(currentZoom);
+                if (currentIndex < zoomLevels.length - 1) {
+                    zoomTimeline(zoomLevels[currentIndex + 1]);
+                }
+                break;
+            case '-':
+                e.preventDefault();
+                const currentZoomMinus = state.timeline.zoomLevel;
+                const zoomLevelsMinus = [0.5, 1, 2, 4];
+                const currentIndexMinus = zoomLevelsMinus.indexOf(currentZoomMinus);
+                if (currentIndexMinus > 0) {
+                    zoomTimeline(zoomLevelsMinus[currentIndexMinus - 1]);
+                }
+                break;
+            case 'home':
+                e.preventDefault();
+                state.currentDate = new Date();
+                updateTimeline();
+                updateDateDisplays();
+                showToast('Navigated to today', 'info');
+                break;
+        }
+        return;
+    }
+
+    // Global shortcuts
+    if (key === 'f5') {
+        e.preventDefault();
+        updateUI();
+        showToast('Data refreshed', 'success');
+        return;
+    }
 }
 
 // Setup IPC Listeners
@@ -876,10 +1002,10 @@ function updateGoalProgress() {
 }
 
 function updateTimeline() {
-    const hoursContainer = document.getElementById('timelineHours');
+    const timeScaleContainer = document.getElementById('timelineTimeScale');
     const activitiesContainer = document.getElementById('timelineActivities');
     
-    if (!hoursContainer || !activitiesContainer) return;
+    if (!timeScaleContainer || !activitiesContainer) return;
     
     let activities = [];
     
@@ -901,98 +1027,157 @@ function updateTimeline() {
         return duration >= 120000; // 2 minutes
     });
     
-    // Generate hour labels (24 hours) with zoom scaling
-    const hourHeight = getTimelineHourHeight();
-    const hours = Array.from({length: 24}, (_, i) => {
+    // Sort activities by start time
+    activities.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+    
+    // Generate time scale (24 hours) with enhanced zoom scaling
+    const baseHourHeight = 80;
+    const hourHeight = Math.max(40, baseHourHeight * state.timeline.zoomLevel);
+    const totalHeight = hourHeight * 24;
+    
+    const timeScale = Array.from({length: 24}, (_, i) => {
+        const isCurrentHour = new Date().getHours() === i && state.currentDate.toDateString() === new Date().toDateString();
         return `
-            <div class="px-3 py-2 text-xs text-muted-foreground border-b border-border flex items-center justify-center" style="height: ${hourHeight}px;">
-                ${i.toString().padStart(2, '0')}:00
+            <div class="relative border-b border-border/50 flex items-center justify-center ${isCurrentHour ? 'bg-primary/10' : ''}" 
+                 style="height: ${hourHeight}px;">
+                <div class="text-xs font-medium text-muted-foreground ${isCurrentHour ? 'text-primary font-bold' : ''}">
+                    ${i.toString().padStart(2, '0')}:00
+                </div>
+                ${isCurrentHour ? '<div class="absolute left-0 w-1 h-full bg-primary"></div>' : ''}
             </div>
         `;
     }).join('');
     
-    hoursContainer.innerHTML = hours;
+    timeScaleContainer.innerHTML = timeScale;
+    timeScaleContainer.style.height = `${totalHeight}px`;
     
     if (activities.length === 0) {
         activitiesContainer.innerHTML = `
-            <div class="flex items-center justify-center h-64">
+            <div class="flex flex-col items-center justify-center py-20">
                 <div class="text-center">
-                    <i class="fas fa-calendar-times text-muted-foreground text-3xl mb-3"></i>
-                    <p class="text-muted-foreground">No activities tracked (showing only 2+ min activities)</p>
+                    <i class="fas fa-calendar-times text-muted-foreground text-4xl mb-4"></i>
+                    <h3 class="text-lg font-semibold text-muted-foreground mb-2">No Activities Found</h3>
+                    <p class="text-sm text-muted-foreground">No activities tracked for this period (showing only 2+ min activities)</p>
                 </div>
             </div>
         `;
         return;
     }
     
-    // Generate 24 hour segments with enhanced visualization
-    const segments = Array.from({length: 24}, (_, hour) => {
-        // Find activities that occur in this hour
-        const hourActivities = activities.filter(activity => {
-            const activityStart = new Date(activity.startTime);
-            const activityEnd = activity.endTime ? new Date(activity.endTime) : new Date();
-            const activityHour = activityStart.getHours();
-            
-            // Check if activity spans into this hour
-            return activityHour === hour || 
-                   (activityStart.getHours() < hour && activityEnd.getHours() >= hour);
-        });
+    // Calculate activity positions for vertical layout
+    let timelineHTML = '';
+    let previousEndPosition = 0;
+    
+    activities.forEach((activity, index) => {
+        const activityStart = new Date(activity.startTime);
+        const activityEnd = activity.endTime ? new Date(activity.endTime) : new Date();
+        const duration = activityEnd - activityStart;
         
-        // Create activity blocks for this hour
-        const blocks = hourActivities.map((activity, index) => {
-            const activityStart = new Date(activity.startTime);
-            const activityEnd = activity.endTime ? new Date(activity.endTime) : new Date();
-            
-            // Calculate position within the hour
-            const startMinutes = activityStart.getHours() === hour ? activityStart.getMinutes() : 0;
-            const endMinutes = activityEnd.getHours() === hour ? activityEnd.getMinutes() : 60;
-            
-            const left = (startMinutes / 60) * 100;
-            const width = ((endMinutes - startMinutes) / 60) * 100;
-            const top = index * (28 * state.timeline.zoomLevel); // Stack with zoom scaling
-            
-            const duration = activityEnd - activityStart;
-            const appIcon = getAppIcon(activity.app);
-            const iconHtml = appIcon ? 
-                `<img src="${appIcon}" alt="${activity.app}" class="w-4 h-4 rounded mr-2" />` : 
-                `<i class="fas fa-${getCategoryIcon(activity.category)} text-sm mr-2"></i>`;
-            
-            const categoryColors = {
-                'productive': 'bg-green-500 border-green-600 text-white hover:bg-green-600',
-                'break': 'bg-yellow-500 border-yellow-600 text-white hover:bg-yellow-600',
-                'distracted': 'bg-red-500 border-red-600 text-white hover:bg-red-600'
-            };
-            
-            const blockHeight = Math.max(24, 20 * state.timeline.zoomLevel);
-            
-            return `
-                <div class="absolute px-2 py-1 text-xs rounded border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer ${categoryColors[activity.category] || 'bg-gray-500 border-gray-600 text-white hover:bg-gray-600'}" 
-                     style="left: ${left}%; width: ${width}%; top: ${top}px; min-height: ${blockHeight}px;"
-                     onclick="showActivityDetails('${activity.id}')"
-                     title="${activity.app} - ${activity.title || 'No title'} (${formatDuration(duration)})">
-                    <div class="flex items-center">
-                        ${state.timeline.zoomLevel >= 1 ? iconHtml : ''}
-                        <span class="truncate">${activity.app}</span>
-                        ${state.timeline.zoomLevel >= 2 ? `<span class="ml-auto text-xs opacity-75">${Math.round(duration / 60000)}m</span>` : ''}
+        // Calculate vertical position based on time
+        const startHour = activityStart.getHours();
+        const startMinutes = activityStart.getMinutes();
+        const endHour = activityEnd.getHours();
+        const endMinutes = activityEnd.getMinutes();
+        
+        const startPosition = (startHour * hourHeight) + (startMinutes / 60 * hourHeight);
+        const endPosition = (endHour * hourHeight) + (endMinutes / 60 * hourHeight);
+        const blockHeight = Math.max(20 * state.timeline.zoomLevel, endPosition - startPosition);
+        
+        // Add spacing if there's a gap between activities
+        const gap = startPosition - previousEndPosition;
+        if (gap > 10 && index > 0) {
+            timelineHTML += `
+                <div class="relative flex items-center py-2 timeline-gap" style="margin-top: ${gap}px;">
+                    <div class="absolute left-6 w-2 h-2 bg-muted rounded-full -ml-1"></div>
+                    <div class="ml-12 text-xs text-muted-foreground italic bg-background px-2 py-1 rounded-full border border-border/50 shadow-sm">
+                        <i class="fas fa-clock mr-1 opacity-50"></i>
+                        ${gap > hourHeight ? `${Math.round(gap / hourHeight)}h ${Math.round((gap % hourHeight) / hourHeight * 60)}m gap` : `${Math.round(gap / hourHeight * 60)}m gap`}
                     </div>
-                    ${state.timeline.zoomLevel >= 2 && activity.title ? `<div class="text-xs opacity-75 truncate mt-1">${activity.title}</div>` : ''}
                 </div>
             `;
-        }).join('');
+        }
         
-        return `
-            <div class="relative border-b border-border bg-background hover:bg-muted/20 transition-colors" style="height: ${hourHeight}px;">
-                ${blocks}
+        const appIcon = getAppIcon(activity.app);
+        const iconHtml = appIcon ? 
+            `<img src="${appIcon}" alt="${activity.app}" class="w-6 h-6 rounded-sm mr-3 flex-shrink-0" />` : 
+            `<div class="w-6 h-6 bg-muted rounded-sm mr-3 flex-shrink-0 flex items-center justify-center">
+                <i class="fas fa-${getCategoryIcon(activity.category)} text-xs text-muted-foreground"></i>
+            </div>`;
+        
+        const categoryColors = {
+            'productive': 'bg-gradient-to-r from-green-500 to-green-600 border-green-600 text-white shadow-green-100',
+            'break': 'bg-gradient-to-r from-yellow-500 to-yellow-600 border-yellow-600 text-white shadow-yellow-100',
+            'distracted': 'bg-gradient-to-r from-red-500 to-red-600 border-red-600 text-white shadow-red-100'
+        };
+        
+        const categoryIcons = {
+            'productive': 'code',
+            'break': 'coffee',
+            'distracted': 'mobile-alt'
+        };
+        
+        timelineHTML += `
+            <div class="relative flex items-start group hover:scale-[1.02] transition-all duration-200" 
+                 style="margin-top: ${index === 0 ? startPosition : Math.max(0, startPosition - previousEndPosition)}px;">
+                <!-- Timeline node -->
+                <div class="absolute left-6 w-4 h-4 bg-primary rounded-full border-2 border-card shadow-sm -ml-2 mt-2 z-10 timeline-node"></div>
+                
+                <!-- Activity card -->
+                <div class="ml-12 timeline-card ${categoryColors[activity.category] || 'bg-gradient-to-r from-gray-500 to-gray-600 border-gray-600 text-white shadow-gray-100'} 
+                     rounded-lg border-l-4 shadow-lg hover:shadow-xl cursor-pointer min-w-0 flex-1 activity-${activity.category}"
+                     style="min-height: ${blockHeight}px;"
+                     onclick="showActivityDetails('${activity.id}')"
+                     title="${activity.app} - ${activity.title || 'No title'} (${formatDuration(duration)})">
+                    
+                    <div class="p-4 h-full flex flex-col justify-between">
+                        <!-- Header -->
+                        <div class="flex items-center">
+                            ${state.timeline.zoomLevel >= 1 ? iconHtml : ''}
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <h4 class="font-semibold text-sm truncate">${activity.app}</h4>
+                                    <i class="fas fa-${categoryIcons[activity.category]} text-xs opacity-75"></i>
+                                </div>
+                                ${state.timeline.zoomLevel >= 1.5 && activity.title ? 
+                                    `<p class="text-xs opacity-90 truncate">${activity.title}</p>` : ''}
+                            </div>
+                            <div class="text-right flex-shrink-0 ml-3">
+                                <div class="text-xs font-medium opacity-90">
+                                    ${formatDuration(duration)}
+                                </div>
+                                ${state.timeline.zoomLevel >= 1.5 ? 
+                                    `<div class="text-xs opacity-75">
+                                        ${activityStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </div>` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Progress bar for longer activities -->
+                        ${blockHeight > 60 && state.timeline.zoomLevel >= 2 ? `
+                            <div class="mt-3">
+                                <div class="w-full bg-white/20 rounded-full h-1">
+                                    <div class="bg-white h-1 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
             </div>
         `;
-    }).join('');
+        
+        previousEndPosition = endPosition;
+    });
     
-    activitiesContainer.innerHTML = segments;
+    activitiesContainer.innerHTML = timelineHTML;
+    activitiesContainer.style.minHeight = `${totalHeight}px`;
+    
+    // Update current time indicator
     updateCurrentTimeIndicator();
 }
 
 function updateCurrentTimeIndicator() {
     const indicator = document.getElementById('currentTimeLine');
+    const timeLabel = document.getElementById('currentTimeLabel');
     if (!indicator) return;
     
     const now = new Date();
@@ -1004,22 +1189,28 @@ function updateCurrentTimeIndicator() {
     }
     
     indicator.classList.remove('hidden');
+    indicator.classList.add('current-time-line');
     
     const hours = now.getHours();
     const minutes = now.getMinutes();
     
-    // Calculate vertical position based on hour and minute with zoom scaling
-    const segmentHeight = getTimelineHourHeight();
-    const headerHeight = 56; // Height of the header
-    const topPosition = headerHeight + hours * segmentHeight + (minutes / 60) * segmentHeight;
+    // Calculate vertical position based on current time
+    const baseHourHeight = 80;
+    const hourHeight = Math.max(40, baseHourHeight * state.timeline.zoomLevel);
+    const topPosition = hours * hourHeight + (minutes / 60) * hourHeight;
     
     indicator.style.top = `${topPosition}px`;
+    
+    if (timeLabel) {
+        timeLabel.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
 }
 
 // Timeline Enhancement Functions
 function getTimelineHourHeight() {
-    // Base height is 64px (h-16), scale with zoom
-    return Math.max(32, 64 * state.timeline.zoomLevel);
+    // Updated for vertical timeline layout
+    const baseHourHeight = 80;
+    return Math.max(40, baseHourHeight * state.timeline.zoomLevel);
 }
 
 function changeTimelineView(viewMode) {
@@ -1348,6 +1539,7 @@ window.processBulkCategorize = processBulkCategorize;
 window.importCategoriesFromCSV = importCategoriesFromCSV;
 window.exportCategoriesToCSV = exportCategoriesToCSV;
 window.deleteActivity = deleteActivity;
+window.handleKeyboardShortcuts = handleKeyboardShortcuts;
 
 // Enhanced Analytics Function
 function updateAnalytics() {
