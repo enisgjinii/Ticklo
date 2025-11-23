@@ -3,7 +3,7 @@ let ipcRenderer = null;
 if (typeof window !== 'undefined' && window.require) {
     try {
         const electron = window.require('electron');
-        ipcRenderer = electron.ipcRenderer;
+        ipcRenderer = electron.ipcRenderer;3
     } catch (e) {
         console.warn('Running outside Electron environment');
     }
