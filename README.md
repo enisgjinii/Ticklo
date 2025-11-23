@@ -52,6 +52,21 @@ npm start
 - **🖥️ System Tray Integration**: Runs in the background, always available from your system tray
 - **🎨 Modern UI**: Clean, responsive interface with collapsible sidebar and smooth animations
 
+### ✨ Enhanced UI Features
+- **🌓 Dark & Light Mode**: Complete theme support with smooth transitions and persistent settings
+- **🖼️ App Icons**: Displays actual application icons for better visual recognition
+- **📊 Stats Dashboard**: Real-time statistics showing total time, active apps, and most used applications
+- **🔍 Search & Filter**: Quickly find activities by app name
+- **⏸️ Pause/Resume**: Control tracking with a single click
+- **📱 Responsive Design**: Beautiful interface that adapts to your screen size
+
+### 💾 Data Management
+- **📤 Export to CSV**: Export your tracking data for external analysis
+- **📥 Import from CSV**: Import previously exported data
+- **💿 Local Storage**: All data stored locally in the `data/` folder for privacy
+- **🔄 Data Persistence**: Automatic saving of tracking sessions
+- **🗑️ Clear Data**: Option to clear all tracking data when needed
+
 ### 🤖 Intelligent Auto-Categorization
 - **🧠 Smart Pattern Recognition**: Automatically detects development tools, design software, and productivity apps
 - **🌐 Browser Intelligence**: Analyzes website URLs and page titles for accurate categorization

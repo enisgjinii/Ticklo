@@ -368,12 +368,40 @@ ipcMain.on('save-tracking-data', (event, data) => {
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
+      console.log('📁 Created data directory:', dataDir);
     }
 
     const filePath = path.join(dataDir, `tracking-${data.date}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    
+    // Add metadata
+    const dataWithMetadata = {
+      ...data,
+      savedAt: new Date().toISOString(),
+      version: '1.0.0',
+      appCount: Object.keys(data.apps || {}).length,
+      totalSessions: Object.values(data.apps || {}).reduce((sum, app) => sum + (app.sessions?.length || 0), 0)
+    };
+    
+    // Write to file with pretty formatting
+    fs.writeFileSync(filePath, JSON.stringify(dataWithMetadata, null, 2), 'utf8');
+    console.log(`✅ Saved tracking data: ${filePath} (${dataWithMetadata.appCount} apps, ${dataWithMetadata.totalSessions} sessions)`);
+    
+    // Also save a backup every hour
+    const backupDir = path.join(dataDir, 'backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    
+    const hour = new Date().getHours();
+    const backupPath = path.join(backupDir, `tracking-${data.date}-backup-${hour}.json`);
+    fs.writeFileSync(backupPath, JSON.stringify(dataWithMetadata, null, 2), 'utf8');
+    
   } catch (error) {
-    console.error('Error saving tracking data:', error);
+    console.error('❌ Error saving tracking data:', error);
+    // Try to notify the renderer about the error
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('save-error', error.message);
+    }
   }
 });
 
@@ -384,15 +412,87 @@ ipcMain.on('load-tracking-data', (event, dateKey) => {
     const filePath = path.join(dataDir, `tracking-${dateKey}.json`);
 
     if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      const data = JSON.parse(fileContent);
+      
+      console.log(`📂 Loaded tracking data: ${filePath} (${data.appCount || 0} apps, ${data.totalSessions || 0} sessions)`);
       event.reply('tracking-data-loaded', data);
     } else {
+      console.log(`📭 No tracking data found for ${dateKey}`);
       event.reply('tracking-data-loaded', null);
     }
   } catch (error) {
-    console.error('Error loading tracking data:', error);
+    console.error('❌ Error loading tracking data:', error);
+    
+    // Try to load from backup
+    try {
+      const dataDir = path.join(process.cwd(), 'data');
+      const backupDir = path.join(dataDir, 'backups');
+      const backupFiles = fs.readdirSync(backupDir).filter(f => f.startsWith(`tracking-${dateKey}-backup-`));
+      
+      if (backupFiles.length > 0) {
+        // Load the most recent backup
+        const latestBackup = backupFiles.sort().reverse()[0];
+        const backupPath = path.join(backupDir, latestBackup);
+        const data = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+        console.log(`🔄 Loaded from backup: ${latestBackup}`);
+        event.reply('tracking-data-loaded', data);
+        return;
+      }
+    } catch (backupError) {
+      console.error('❌ Error loading backup:', backupError);
+    }
+    
     event.reply('tracking-data-loaded', null);
   }
+});
+
+// Save settings
+ipcMain.on('save-settings', (event, settings) => {
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    const settingsPath = path.join(dataDir, 'settings.json');
+    let existingSettings = {};
+    
+    if (fs.existsSync(settingsPath)) {
+      existingSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    }
+    
+    const updatedSettings = { ...existingSettings, ...settings };
+    fs.writeFileSync(settingsPath, JSON.stringify(updatedSettings, null, 2));
+  } catch (error) {
+    console.error('Error saving settings:', error);
+  }
+});
+
+// Load settings
+ipcMain.handle('load-settings', () => {
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+    const settingsPath = path.join(dataDir, 'settings.json');
+
+    if (fs.existsSync(settingsPath)) {
+      return JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    }
+    return null;
+  } catch (error) {
+    console.error('Error loading settings:', error);
+    return null;
+  }
+});
+
+// Pause tracking
+ipcMain.on('pause-tracking', () => {
+  stopTracking();
+});
+
+// Resume tracking
+ipcMain.on('resume-tracking', () => {
+  startTracking();
 });
 
 // Function to migrate existing data from default location to app directory

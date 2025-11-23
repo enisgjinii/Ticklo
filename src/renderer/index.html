@@ -30,6 +30,14 @@
         }
     </script>
     <style>
+        :root {
+            --bg-background: #0a0a0a;
+            --bg-card: #0f0f0f;
+            --border-color: #1f1f1f;
+            --text-foreground: #ffffff;
+            --text-muted: #717171;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -40,6 +48,7 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
             overflow: hidden;
             -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* Custom scrollbar */
@@ -49,11 +58,11 @@
         }
 
         ::-webkit-scrollbar-track {
-            background: #0a0a0a;
+            background: var(--bg-background);
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #1f1f1f;
+            background: var(--border-color);
             border-radius: 4px;
         }
 
@@ -145,6 +154,66 @@
             width: 32px;
             height: 32px;
             border-radius: 6px;
+            object-fit: contain;
+            background: transparent;
+        }
+
+        /* Light mode adjustments */
+        body.bg-white .sidebar {
+            background-color: #f9fafb;
+            border-color: #e5e7eb;
+        }
+
+        body.bg-white .menu-item:hover {
+            background-color: #e5e7eb;
+        }
+
+        body.bg-white .menu-item.active {
+            background-color: #e5e7eb;
+            border-left: 2px solid #3b82f6;
+        }
+
+        body.bg-white .btn:hover {
+            background-color: #f3f4f6;
+        }
+
+        body.bg-white .timeline-hour {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        body.bg-white ::-webkit-scrollbar-track {
+            background: #ffffff;
+        }
+
+        body.bg-white ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+        }
+
+        body.bg-white ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        /* Stats cards */
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        body.bg-white .stat-card {
+            background: #f9fafb;
+            border-color: #e5e7eb;
+        }
+
+        body.bg-white .stat-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
     </style>
 </head>
@@ -288,6 +357,10 @@
                     </button>
                     <input id="searchInput" type="text" placeholder="Search..."
                         class="ml-2 p-1 rounded bg-card border border-border text-foreground" />
+                    <!-- Save Indicator -->
+                    <div id="saveIndicator" class="ml-2 px-2 py-1 rounded bg-secondary text-xs opacity-0 transition-opacity" title="Auto-save status">
+                        <span id="saveStatus">💾 Saved</span>
+                    </div>
                     <!-- End New Controls -->
                     <!-- Refresh -->
                     <button id="refresh" class="btn p-2 rounded hover:bg-secondary" title="Refresh">
@@ -339,6 +412,29 @@
                         <div class="max-w-7xl mx-auto">
                             <h2 class="text-2xl font-semibold mb-6">Timeline</h2>
 
+                            <!-- Stats Dashboard -->
+                            <div id="statsDashboard" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div class="stat-card">
+                                    <div class="text-xs text-muted-foreground mb-1">Total Time</div>
+                                    <div id="totalTime" class="text-2xl font-bold">0h 0m</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="text-xs text-muted-foreground mb-1">Active Apps</div>
+                                    <div id="activeApps" class="text-2xl font-bold">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="text-xs text-muted-foreground mb-1">Most Used</div>
+                                    <div id="mostUsed" class="text-lg font-semibold truncate">-</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="text-xs text-muted-foreground mb-1">Status</div>
+                                    <div id="trackingStatus" class="text-lg font-semibold">
+                                        <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                        Tracking
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Timeline Container -->
                             <div class="bg-card border border-border rounded-lg overflow-hidden">
                                 <div id="timelineGrid" class="relative">
@@ -367,11 +463,123 @@
     </div>
 
     <!-- Settings View -->
-    <div id="settingsView" class="hidden h-full p-6">
+    <div id="settingsView" class="hidden h-full p-6 overflow-auto">
         <div class="max-w-3xl mx-auto">
             <h2 class="text-2xl font-semibold mb-6">Settings</h2>
+            
+            <!-- Appearance Settings -->
+            <div class="bg-card border border-border rounded-lg p-6 mb-4">
+                <h3 class="text-lg font-semibold mb-4">Appearance</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-medium">Theme</div>
+                            <div class="text-sm text-muted-foreground">Choose your preferred color scheme</div>
+                        </div>
+                        <button id="settingsThemeToggle" class="btn px-4 py-2 rounded bg-secondary">
+                            <span id="currentTheme">Dark</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tracking Settings -->
+            <div class="bg-card border border-border rounded-lg p-6 mb-4">
+                <h3 class="text-lg font-semibold mb-4">Tracking</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-medium">Auto-start tracking</div>
+                            <div class="text-sm text-muted-foreground">Start tracking when app launches</div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="autoStartToggle" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-secondary rounded-full peer peer-checked:bg-accent"></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-medium">Minimize to tray</div>
+                            <div class="text-sm text-muted-foreground">Keep app running in system tray</div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="minimizeToTrayToggle" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-secondary rounded-full peer peer-checked:bg-accent"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Management -->
+            <div class="bg-card border border-border rounded-lg p-6 mb-4">
+                <h3 class="text-lg font-semibold mb-4">Data Management</h3>
+                
+                <!-- Data Location Info -->
+                <div class="mb-4 p-3 bg-secondary rounded">
+                    <div class="text-sm font-medium mb-1">Data Storage Location</div>
+                    <div class="text-xs text-muted-foreground mb-2">
+                        All tracking data is saved locally in JSON format
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <code class="text-xs bg-background px-2 py-1 rounded flex-1">./data/tracking-YYYY-MM-DD.json</code>
+                        <button id="openDataFolder" class="btn px-3 py-1 rounded bg-accent text-xs">
+                            Open Folder
+                        </button>
+                    </div>
+                    <div class="text-xs text-muted-foreground mt-2">
+                        📁 Main data: <code>data/tracking-*.json</code><br>
+                        💾 Backups: <code>data/backups/tracking-*-backup-*.json</code><br>
+                        ⚙️ Settings: <code>data/settings.json</code>
+                    </div>
+                </div>
+                
+                <!-- Data Stats -->
+                <div class="mb-4 p-3 bg-secondary rounded">
+                    <div class="text-sm font-medium mb-2">Current Session</div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <span class="text-muted-foreground">Apps Tracked:</span>
+                            <span id="statsAppsCount" class="ml-2 font-semibold">0</span>
+                        </div>
+                        <div>
+                            <span class="text-muted-foreground">Total Sessions:</span>
+                            <span id="statsSessions" class="ml-2 font-semibold">0</span>
+                        </div>
+                        <div>
+                            <span class="text-muted-foreground">Last Saved:</span>
+                            <span id="statsLastSaved" class="ml-2 font-semibold">Never</span>
+                        </div>
+                        <div>
+                            <span class="text-muted-foreground">Auto-save:</span>
+                            <span class="ml-2 font-semibold text-green-500">✓ Active</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <button id="saveNow" class="w-full btn px-4 py-2 rounded bg-accent text-left">
+                        💾 Save Now
+                    </button>
+                    <button id="exportAllData" class="w-full btn px-4 py-2 rounded bg-secondary text-left">
+                        📤 Export All Data
+                    </button>
+                    <button id="importData" class="w-full btn px-4 py-2 rounded bg-secondary text-left">
+                        📥 Import Data
+                    </button>
+                    <button id="clearAllData" class="w-full btn px-4 py-2 rounded bg-red-900 text-red-100 text-left">
+                        🗑️ Clear All Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- About -->
             <div class="bg-card border border-border rounded-lg p-6">
-                <p class="text-muted-foreground">Settings coming soon...</p>
+                <h3 class="text-lg font-semibold mb-4">About</h3>
+                <div class="space-y-2 text-sm text-muted-foreground">
+                    <p>Ticklo Activity Tracker v1.0.0</p>
+                    <p>A beautiful time tracking app for monitoring your daily workflow</p>
+                    <p class="pt-2">Built with Electron, Tailwind CSS, and ❤️</p>
+                </div>
             </div>
         </div>
     </div>
