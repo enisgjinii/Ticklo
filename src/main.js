@@ -55,7 +55,7 @@ function createTray() {
   // Create a simple tray icon programmatically if file doesn't exist
   const trayIconPath = path.join(__dirname, 'assets', 'tray-icon.png');
   let trayIcon;
-  
+
   try {
     trayIcon = nativeImage.createFromPath(trayIconPath);
     if (trayIcon.isEmpty()) {
@@ -65,9 +65,9 @@ function createTray() {
     // Create a simple colored square as fallback icon
     trayIcon = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAFYSURBVDiNpZM9SwNBEIafgwiCYKGVjY2NlYWFhY2NjRYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhb+BwAAAAAAAAAAAAAAAAAA');
   }
-  
+
   tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
-  
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: 'Show Ticklo',
@@ -94,7 +94,7 @@ function createTray() {
 
   tray.setContextMenu(contextMenu);
   tray.setToolTip('Ticklo Activity Tracker');
-  
+
   tray.on('click', () => {
     mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
   });
@@ -108,7 +108,7 @@ async function getAppIcon(appName, appPath) {
 
   try {
     let iconPath = null;
-    
+
     if (process.platform === 'win32') {
       // For Windows, try to get the executable icon
       if (appPath && fs.existsSync(appPath)) {
@@ -145,14 +145,14 @@ async function trackActivity() {
     if (!activeWindow) {
       return;
     }
-    
+
     const window = await activeWindow();
     if (window && window.owner && window.title) {
       const timestamp = new Date().toISOString();
-      
+
       // Get app icon
       const appIcon = await getAppIcon(window.owner.name, window.owner.path);
-      
+
       const activity = {
         timestamp,
         title: window.title,
@@ -165,9 +165,9 @@ async function trackActivity() {
 
       // Check if this is the same activity as the last one
       const lastActivity = activityData[activityData.length - 1];
-      if (lastActivity && 
-          lastActivity.app === activity.app && 
-          lastActivity.title === activity.title) {
+      if (lastActivity &&
+        lastActivity.app === activity.app &&
+        lastActivity.title === activity.title) {
         // Extend the duration of the last activity
         lastActivity.duration += 1000;
       } else {
@@ -175,7 +175,7 @@ async function trackActivity() {
         activityData.push(activity);
       }
 
-      // Send update to renderer
+      // Send update to renderer (both old and new format)
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('window-focus-changed', {
           app: activity.app,
@@ -183,11 +183,20 @@ async function trackActivity() {
           appIcon: activity.appIcon,
           appPath: activity.appPath
         });
+
+        // New UI format
+        mainWindow.webContents.send('active-window-update', {
+          name: activity.app,
+          title: activity.title,
+          icon: activity.appIcon,
+          path: activity.appPath,
+          timestamp: Date.now()
+        });
       }
 
       // Keep only last 7 days of data
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      activityData = activityData.filter(item => 
+      activityData = activityData.filter(item =>
         new Date(item.timestamp) > sevenDaysAgo
       );
     }
@@ -297,11 +306,11 @@ ipcMain.handle('open-data-directory', (event) => {
   if (!fs.existsSync(appDirectory)) {
     fs.mkdirSync(appDirectory, { recursive: true });
   }
-  
+
   // Open the directory in file explorer
   const { shell } = require('electron');
   shell.openPath(appDirectory);
-  
+
   return appDirectory;
 });
 
@@ -310,7 +319,7 @@ ipcMain.on('get-user-data-path', (event) => {
   // Use app directory instead of default userData path
   // This stores files in the app's directory rather than AppData
   const appDirectory = path.join(process.cwd(), 'data');
-  
+
   // Create the directory if it doesn't exist
   if (!fs.existsSync(appDirectory)) {
     try {
@@ -322,14 +331,14 @@ ipcMain.on('get-user-data-path', (event) => {
       return;
     }
   }
-  
+
   event.returnValue = appDirectory;
 });
 
 // Handle active window requests
 ipcMain.on('get-active-window', async (event) => {
   if (!isTracking || !activeWindow) return;
-  
+
   try {
     const window = await activeWindow();
     if (window && window.owner && window.title) {
@@ -346,11 +355,51 @@ ipcMain.on('get-active-window', async (event) => {
   }
 });
 
+// Handle start tracking request from new UI
+ipcMain.on('start-tracking', () => {
+  if (!isTracking) {
+    startTracking();
+  }
+});
+
+// Save tracking data for a specific date
+ipcMain.on('save-tracking-data', (event, data) => {
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    const filePath = path.join(dataDir, `tracking-${data.date}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('Error saving tracking data:', error);
+  }
+});
+
+// Load tracking data for a specific date
+ipcMain.on('load-tracking-data', (event, dateKey) => {
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+    const filePath = path.join(dataDir, `tracking-${dateKey}.json`);
+
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      event.reply('tracking-data-loaded', data);
+    } else {
+      event.reply('tracking-data-loaded', null);
+    }
+  } catch (error) {
+    console.error('Error loading tracking data:', error);
+    event.reply('tracking-data-loaded', null);
+  }
+});
+
 // Function to migrate existing data from default location to app directory
 function migrateDataIfNeeded() {
   const defaultUserDataPath = app.getPath('userData');
   const appDataDirectory = path.join(process.cwd(), 'data');
-  
+
   // Create the directory if it doesn't exist
   if (!fs.existsSync(appDataDirectory)) {
     try {
@@ -360,14 +409,14 @@ function migrateDataIfNeeded() {
       return;
     }
   }
-  
+
   // Check for files to migrate
   const filesToMigrate = ['settings.json', 'activities.json'];
-  
+
   filesToMigrate.forEach(fileName => {
     const sourcePath = path.join(defaultUserDataPath, fileName);
     const destPath = path.join(appDataDirectory, fileName);
-    
+
     // If the file exists in the default location but not in the app directory, copy it
     if (fs.existsSync(sourcePath) && !fs.existsSync(destPath)) {
       try {
@@ -383,15 +432,15 @@ function migrateDataIfNeeded() {
 app.whenReady().then(async () => {
   // Migrate data from default location
   migrateDataIfNeeded();
-  
+
   createWindow();
   createTray();
-  
+
   // Wait for get-windows to load before starting tracking
   while (!activeWindow) {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
+
   // Start tracking by default
   startTracking();
 });
