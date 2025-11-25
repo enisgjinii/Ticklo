@@ -36,6 +36,7 @@
             --border-color: #1f1f1f;
             --text-foreground: #ffffff;
             --text-muted: #717171;
+            --accent-color: #00d4ff;
         }
 
         * {
@@ -52,169 +53,89 @@
         }
 
         /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-background);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #2f2f2f;
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-background); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2f2f2f; }
 
         /* Sidebar transition */
-        .sidebar {
-            transition: width 0.3s ease, transform 0.3s ease;
-        }
+        .sidebar { transition: width 0.3s ease, transform 0.3s ease; }
 
         /* Button hover effects */
-        .btn {
-            transition: all 0.2s ease;
-        }
-
-        .btn:hover {
-            background-color: #1f1f1f;
-        }
-
-        .btn:active {
-            transform: scale(0.95);
-        }
+        .btn { transition: all 0.2s ease; }
+        .btn:hover { background-color: #1f1f1f; }
+        .btn:active { transform: scale(0.95); }
 
         /* Activity block animations */
-        .activity-block {
-            transition: all 0.2s ease;
-        }
-
-        .activity-block:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.2);
-        }
+        .activity-block { transition: all 0.2s ease; }
+        .activity-block:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 212, 255, 0.2); }
 
         /* Tab styling */
-        .tab {
-            position: relative;
-            transition: all 0.2s ease;
-        }
-
-        .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: white;
-        }
+        .tab { position: relative; transition: all 0.2s ease; }
+        .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: white; }
 
         /* Timeline grid */
-        .timeline-hour {
-            border-bottom: 1px solid #1f1f1f;
-            height: 60px;
-        }
-
-        .timeline-hour:hover {
-            background-color: rgba(31, 31, 31, 0.3);
-        }
+        .timeline-hour { border-bottom: 1px solid #1f1f1f; height: 60px; }
+        .timeline-hour:hover { background-color: rgba(31, 31, 31, 0.3); }
 
         /* Sidebar menu item */
-        .menu-item {
-            transition: all 0.2s ease;
-        }
-
-        .menu-item.active {
-            background-color: #1f1f1f;
-            border-left: 2px solid #00d4ff;
-        }
-
-        .menu-item:hover {
-            background-color: rgba(31, 31, 31, 0.7);
-        }
+        .menu-item { transition: all 0.2s ease; }
+        .menu-item.active { background-color: #1f1f1f; border-left: 3px solid #00d4ff; }
+        .menu-item:hover { background-color: rgba(31, 31, 31, 0.7); }
 
         /* Icon sizing */
-        .icon {
-            width: 20px;
-            height: 20px;
-        }
-
-        .icon-lg {
-            width: 24px;
-            height: 24px;
-        }
+        .icon { width: 20px; height: 20px; }
+        .icon-lg { width: 24px; height: 24px; }
+        .icon-xl { width: 48px; height: 48px; }
 
         /* App icon in activity */
-        .app-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            object-fit: contain;
-            background: transparent;
-        }
+        .app-icon { width: 32px; height: 32px; border-radius: 6px; object-fit: contain; background: transparent; }
 
         /* Light mode adjustments */
-        body.bg-white .sidebar {
-            background-color: #f9fafb;
-            border-color: #e5e7eb;
-        }
-
-        body.bg-white .menu-item:hover {
-            background-color: #e5e7eb;
-        }
-
-        body.bg-white .menu-item.active {
-            background-color: #e5e7eb;
-            border-left: 2px solid #3b82f6;
-        }
-
-        body.bg-white .btn:hover {
-            background-color: #f3f4f6;
-        }
-
-        body.bg-white .timeline-hour {
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        body.bg-white ::-webkit-scrollbar-track {
-            background: #ffffff;
-        }
-
-        body.bg-white ::-webkit-scrollbar-thumb {
-            background: #d1d5db;
-        }
-
-        body.bg-white ::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af;
-        }
+        body.light-mode { --bg-background: #ffffff; --bg-card: #f9fafb; --border-color: #e5e7eb; --text-foreground: #111827; --text-muted: #6b7280; }
+        body.light-mode .sidebar { background-color: #f9fafb; border-color: #e5e7eb; }
+        body.light-mode .menu-item:hover { background-color: #e5e7eb; }
+        body.light-mode .menu-item.active { background-color: #e5e7eb; border-left: 3px solid #3b82f6; }
+        body.light-mode .btn:hover { background-color: #f3f4f6; }
+        body.light-mode .timeline-hour { border-bottom: 1px solid #e5e7eb; }
+        body.light-mode ::-webkit-scrollbar-track { background: #ffffff; }
+        body.light-mode ::-webkit-scrollbar-thumb { background: #d1d5db; }
 
         /* Stats cards */
-        .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 16px;
-            transition: all 0.2s ease;
-        }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; transition: all 0.2s ease; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); }
 
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
+        /* Header gradient */
+        .header-gradient { background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%); }
+        body.light-mode .header-gradient { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
 
-        body.bg-white .stat-card {
-            background: #f9fafb;
-            border-color: #e5e7eb;
-        }
+        /* Page header */
+        .page-header { padding: 24px 32px; border-bottom: 1px solid var(--border-color); }
+        .page-title { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+        .page-subtitle { font-size: 14px; color: var(--text-muted); }
 
-        body.bg-white .stat-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
+        /* FAQ accordion */
+        .faq-item { border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+        .faq-question { padding: 16px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
+        .faq-question:hover { background: rgba(0, 212, 255, 0.05); }
+        .faq-answer { padding: 0 20px 16px; color: var(--text-muted); display: none; }
+        .faq-item.open .faq-answer { display: block; }
+        .faq-item.open .faq-chevron { transform: rotate(180deg); }
+        .faq-chevron { transition: transform 0.2s ease; }
+
+        /* Feature cards */
+        .feature-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; transition: all 0.2s ease; }
+        .feature-card:hover { border-color: var(--accent-color); transform: translateY(-2px); }
+
+        /* Toggle switch */
+        .toggle-switch { position: relative; width: 48px; height: 26px; background: var(--border-color); border-radius: 13px; cursor: pointer; transition: background 0.2s; }
+        .toggle-switch.active { background: var(--accent-color); }
+        .toggle-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: transform 0.2s; }
+        .toggle-switch.active::after { transform: translateX(22px); }
+
+        /* Date picker */
+        .date-picker-btn { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 16px; cursor: pointer; transition: all 0.2s; }
+        .date-picker-btn:hover { border-color: var(--accent-color); }
     </style>
 </head>
 
@@ -222,411 +143,541 @@
     <!-- Main Container -->
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar w-48 bg-background border-r border-border flex flex-col">
-            <!-- Sidebar Header -->
-            <div class="h-14 flex items-center px-4 border-b border-border">
-                <svg class="icon-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span id="sidebarTitle" class="ml-3 font-semibold text-sm">Ticklo</span>
+        <aside id="sidebar" class="sidebar w-56 bg-background border-r border-border flex flex-col">
+            <!-- Sidebar Header / Logo -->
+            <div class="h-16 flex items-center px-5 border-b border-border">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <span id="sidebarTitle" class="font-bold text-lg tracking-tight">Ticklo</span>
+                </div>
             </div>
 
             <!-- Sidebar Menu -->
-            <nav class="flex-1 py-4">
-                <div class="menu-item active flex items-center px-4 py-3 cursor-pointer" data-page="timeline">
+            <nav class="flex-1 py-4 px-3">
+                <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-3">Main</div>
+                <div class="menu-item active flex items-center px-3 py-2.5 rounded-lg cursor-pointer mb-1" data-page="timeline">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
-                        </path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
-                    <span class="sidebar-label ml-3 text-sm">Timeline</span>
+                    <span class="sidebar-label ml-3 text-sm font-medium">Timeline</span>
                 </div>
-                <div class="menu-item flex items-center px-4 py-3 cursor-pointer" data-page="settings">
+                <div class="menu-item flex items-center px-3 py-2.5 rounded-lg cursor-pointer mb-1" data-page="analytics">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
-                        </path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
-                    <span class="sidebar-label ml-3 text-sm">Settings</span>
+                    <span class="sidebar-label ml-3 text-sm font-medium">Analytics</span>
                 </div>
-                <div class="menu-item flex items-center px-4 py-3 cursor-pointer" data-page="about">
+                
+                <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-3 mt-6">System</div>
+                <div class="menu-item flex items-center px-3 py-2.5 rounded-lg cursor-pointer mb-1" data-page="settings">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
-                    <span class="sidebar-label ml-3 text-sm">About</span>
+                    <span class="sidebar-label ml-3 text-sm font-medium">Settings</span>
                 </div>
-                <div class="menu-item flex items-center px-4 py-3 cursor-pointer" data-page="faq">
+                <div class="menu-item flex items-center px-3 py-2.5 rounded-lg cursor-pointer mb-1" data-page="about">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-                        </path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    <span class="sidebar-label ml-3 text-sm">FAQ</span>
+                    <span class="sidebar-label ml-3 text-sm font-medium">About</span>
+                </div>
+                <div class="menu-item flex items-center px-3 py-2.5 rounded-lg cursor-pointer mb-1" data-page="faq">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="sidebar-label ml-3 text-sm font-medium">FAQ</span>
                 </div>
             </nav>
 
-            <!-- Sidebar Toggle -->
-            <div class="border-t border-border">
-                <button id="sidebarToggle" class="btn w-full flex items-center justify-center py-3 px-4">
-                    <svg id="collapseIcon" class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
-                    </svg>
-                </button>
+            <!-- Sidebar Footer -->
+            <div class="border-t border-border p-3">
+                <div class="flex items-center justify-between px-3 py-2">
+                    <div class="flex items-center gap-2">
+                        <div id="trackingDot" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        <span class="text-xs text-muted-foreground" id="sidebarStatus">Tracking</span>
+                    </div>
+                    <button id="sidebarToggle" class="btn p-1.5 rounded hover:bg-secondary">
+                        <svg id="collapseIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </aside>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col">
-            <!-- Topbar -->
-            <header class="h-14 bg-background border-b border-border flex items-center justify-between px-4">
-                <!-- Left: Sidebar Toggle -->
-                <div class="flex items-center gap-2">
-                    <button id="topbarSidebarToggle" class="btn p-2 rounded hover:bg-secondary">
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="h-16 header-gradient border-b border-border flex items-center justify-between px-6">
+                <!-- Left: Page Title & Breadcrumb -->
+                <div class="flex items-center gap-4">
+                    <button id="topbarSidebarToggle" class="btn p-2 rounded-lg hover:bg-secondary lg:hidden">
                         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 6h16M4 12h16M4 18h16"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
                     </button>
-                </div>
-
-                <!-- Center: Controls -->
-                <div class="flex items-center gap-1">
-                    <!-- Zoom In -->
-                    <button id="zoomIn" class="btn p-2 rounded hover:bg-secondary" title="Zoom In">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path>
-                        </svg>
-                    </button>
-                    <!-- Zoom Out -->
-                    <button id="zoomOut" class="btn p-2 rounded hover:bg-secondary" title="Zoom Out">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path>
-                        </svg>
-                    </button>
-                    <!-- Info -->
-                    <button id="info" class="btn p-2 rounded hover:bg-secondary" title="Info">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </button>
-                    <!-- Delete -->
-                    <button id="delete" class="btn p-2 rounded hover:bg-secondary" title="Delete">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                            </path>
-                        </svg>
-                    </button>
-                    <!-- Plus -->
-                    <button id="plus" class="btn p-2 rounded hover:bg-secondary" title="Add Activity">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                    </button>
-                    <!-- New Controls -->
-                    <button id="themeToggle" class="btn p-2 rounded hover:bg-secondary" title="Toggle Light/Dark Theme">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path id="themeIcon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 3v1m0 16v1m8.66-12.66l-.71.71M5.05 18.95l-.71.71M21 12h-1M4 12H3m15.66 5.66l-.71-.71M5.05 5.05l-.71-.71" />
-                        </svg>
-                    </button>
-                    <button id="exportCsv" class="btn p-2 rounded hover:bg-secondary" title="Export CSV">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 5h6a2 2 0 012 2v10a2 2 0 01-2 2H9a2 2 0 01-2-2V7a2 2 0 012-2z" />
-                        </svg>
-                    </button>
-                    <button id="importCsv" class="btn p-2 rounded hover:bg-secondary" title="Import CSV">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4V4z" />
-                        </svg>
-                    </button>
-                    <button id="pauseToggle" class="btn p-2 rounded hover:bg-secondary" title="Pause/Resume Tracking">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 12L6 6V18z" />
-                        </svg>
-                    </button>
-                    <input id="searchInput" type="text" placeholder="Search..."
-                        class="ml-2 p-1 rounded bg-card border border-border text-foreground" />
-                    <!-- Save Indicator -->
-                    <div id="saveIndicator" class="ml-2 px-2 py-1 rounded bg-secondary text-xs opacity-0 transition-opacity" title="Auto-save status">
-                        <span id="saveStatus">💾 Saved</span>
+                    <div>
+                        <h1 id="pageTitle" class="text-lg font-semibold">Timeline</h1>
+                        <p id="pageSubtitle" class="text-xs text-muted-foreground">Track your daily activities</p>
                     </div>
-                    <!-- End New Controls -->
-                    <!-- Refresh -->
-                    <button id="refresh" class="btn p-2 rounded hover:bg-secondary" title="Refresh">
+                </div>
+
+                <!-- Center: Date Navigation (Timeline only) -->
+                <div id="dateNavigation" class="flex items-center gap-2">
+                    <button id="prevDate" class="btn p-2 rounded-lg hover:bg-secondary">
                         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
-                            </path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
                     </button>
+                    <button id="datePickerBtn" class="date-picker-btn flex items-center gap-2">
+                        <svg class="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span id="currentDate" class="text-sm font-medium">Nov 25, 2025</span>
+                    </button>
+                    <button id="nextDate" class="btn p-2 rounded-lg hover:bg-secondary">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                    <button id="todayBtn" class="btn px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-secondary border border-border ml-2">Today</button>
                 </div>
 
-                <!-- Center-Right: Day/Week Tabs -->
-                <div class="flex items-center gap-1 bg-secondary rounded p-1">
-                    <button id="dayTab" class="tab active px-4 py-1.5 rounded text-sm font-medium">Day</button>
-                    <button id="weekTab" class="tab px-4 py-1.5 rounded text-sm font-medium">Week</button>
-                </div>
-
-                <!-- Right: Date Navigation -->
+                <!-- Right: Actions -->
                 <div class="flex items-center gap-2">
-                    <button id="prevDate" class="btn p-2 rounded hover:bg-secondary">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
-                            </path>
-                        </svg>
-                    </button>
-                    <div class="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                            </path>
-                        </svg>
-                        <span id="currentDate" class="text-sm font-medium"></span>
+                    <div class="flex items-center gap-1 bg-secondary rounded-lg p-1 mr-2" id="viewTabs">
+                        <button id="dayTab" class="tab active px-3 py-1.5 rounded text-xs font-medium">Day</button>
+                        <button id="weekTab" class="tab px-3 py-1.5 rounded text-xs font-medium">Week</button>
                     </div>
-                    <button id="nextDate" class="btn p-2 rounded hover:bg-secondary">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
-                            </path>
+                    <button id="pauseToggle" class="btn p-2 rounded-lg hover:bg-secondary" title="Pause/Resume">
+                        <svg id="pauseIcon" class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </button>
+                    <button id="themeToggle" class="btn p-2 rounded-lg hover:bg-secondary" title="Toggle Theme">
+                        <svg id="themeIcon" class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
+                    </button>
+                    <div id="saveIndicator" class="px-2 py-1 rounded-lg bg-secondary text-xs opacity-0 transition-opacity flex items-center gap-1">
+                        <span id="saveStatus">✓ Saved</span>
+                    </div>
                 </div>
             </header>
 
             <!-- Content Area -->
-            <main id="mainContent" class="flex-1 overflow-auto">
+            <main id="mainContent" class="flex-1 overflow-auto bg-background">
                 <!-- Timeline View (Default) -->
                 <div id="timelineView" class="h-full">
-                    <!-- Day View -->
-                    <div id="dayView" class="h-full p-6">
+                    <div class="p-6">
                         <div class="max-w-7xl mx-auto">
-                            <h2 class="text-2xl font-semibold mb-6">Timeline</h2>
-
                             <!-- Stats Dashboard -->
                             <div id="statsDashboard" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                                 <div class="stat-card">
-                                    <div class="text-xs text-muted-foreground mb-1">Total Time</div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs text-muted-foreground">Total Time</span>
+                                        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
                                     <div id="totalTime" class="text-2xl font-bold">0h 0m</div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="text-xs text-muted-foreground mb-1">Active Apps</div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs text-muted-foreground">Active Apps</span>
+                                        <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                                        </svg>
+                                    </div>
                                     <div id="activeApps" class="text-2xl font-bold">0</div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="text-xs text-muted-foreground mb-1">Most Used</div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs text-muted-foreground">Most Used</span>
+                                        <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                                        </svg>
+                                    </div>
                                     <div id="mostUsed" class="text-lg font-semibold truncate">-</div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="text-xs text-muted-foreground mb-1">Status</div>
-                                    <div id="trackingStatus" class="text-lg font-semibold">
-                                        <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                                        Tracking
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs text-muted-foreground">Status</span>
+                                        <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <div id="trackingStatus" class="text-lg font-semibold flex items-center gap-2">
+                                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                        <span>Tracking</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Timeline Container -->
-                            <div class="bg-card border border-border rounded-lg overflow-hidden">
-                                <div id="timelineGrid" class="relative">
-                                    <!-- Timeline hours will be rendered here -->
+                            <!-- Day View -->
+                            <div id="dayView">
+                                <div class="bg-card border border-border rounded-xl overflow-hidden">
+                                    <div class="p-4 border-b border-border flex items-center justify-between">
+                                        <h3 class="font-semibold">Activity Timeline</h3>
+                                        <div class="flex items-center gap-2">
+                                            <button id="zoomOut" class="btn p-1.5 rounded hover:bg-secondary" title="Zoom Out">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path>
+                                                </svg>
+                                            </button>
+                                            <button id="zoomIn" class="btn p-1.5 rounded hover:bg-secondary" title="Zoom In">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path>
+                                                </svg>
+                                            </button>
+                                            <button id="addActivity" class="btn p-1.5 rounded hover:bg-secondary" title="Add Activity">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="timelineGrid" class="relative max-h-[600px] overflow-y-auto">
+                                        <!-- Timeline hours will be rendered here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Week View -->
+                            <div id="weekView" class="hidden">
+                                <div id="weekGrid" class="grid grid-cols-7 gap-3">
+                                    <!-- Week days will be rendered here -->
                                 </div>
                             </div>
 
                             <!-- No data message -->
-                            <div id="noDataMessage" class="text-center py-12 text-muted-foreground">
-                                <svg class="icon-lg mx-auto mb-4 opacity-50" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                <p class="text-sm">No activity tracked yet. Start using apps and they'll appear here!
-                                </p>
+                            <div id="noDataMessage" class="hidden text-center py-16">
+                                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-semibold mb-2">No Activity Yet</h3>
+                                <p class="text-sm text-muted-foreground">Start using apps and they'll appear here automatically!</p>
                             </div>
                         </div>
                     </div>
-                    <!-- Week grid will be rendered here -->
-                    <div id="weekGrid" class="grid grid-cols-7 gap-2">
-                        <!-- Week days will be rendered here -->
+                </div>
+
+                <!-- Analytics View -->
+                <div id="analyticsView" class="hidden h-full p-6 overflow-auto">
+                    <div class="max-w-6xl mx-auto">
+                        <div class="page-header mb-6 -mx-6 -mt-6 px-6 pt-6">
+                            <h2 class="page-title">Analytics</h2>
+                            <p class="page-subtitle">Insights into your productivity patterns</p>
+                        </div>
+                        
+                        <!-- Analytics Stats -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="stat-card">
+                                <div class="text-xs text-muted-foreground mb-1">This Week</div>
+                                <div id="weeklyTime" class="text-2xl font-bold">0h 0m</div>
+                                <div class="text-xs text-green-400 mt-1">↑ Tracking active</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="text-xs text-muted-foreground mb-1">Daily Average</div>
+                                <div id="dailyAverage" class="text-2xl font-bold">0h 0m</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="text-xs text-muted-foreground mb-1">Most Productive Day</div>
+                                <div id="productiveDay" class="text-2xl font-bold">-</div>
+                            </div>
+                        </div>
+
+                        <!-- Top Apps -->
+                        <div class="bg-card border border-border rounded-xl p-6 mb-6">
+                            <h3 class="font-semibold mb-4">Top Applications</h3>
+                            <div id="topAppsList" class="space-y-3">
+                                <p class="text-sm text-muted-foreground">No data available yet</p>
+                            </div>
+                        </div>
+
+                        <!-- Activity Heatmap Placeholder -->
+                        <div class="bg-card border border-border rounded-xl p-6">
+                            <h3 class="font-semibold mb-4">Activity Overview</h3>
+                            <div id="activityChart" class="h-48 flex items-center justify-center text-muted-foreground">
+                                <p class="text-sm">Activity chart will appear as you track more data</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Settings View -->
+                <div id="settingsView" class="hidden h-full p-6 overflow-auto">
+                    <div class="max-w-3xl mx-auto">
+                        <div class="page-header mb-6 -mx-6 -mt-6 px-6 pt-6">
+                            <h2 class="page-title">Settings</h2>
+                            <p class="page-subtitle">Customize your Ticklo experience</p>
+                        </div>
+                        
+                        <!-- Appearance Settings -->
+                        <div class="bg-card border border-border rounded-xl p-6 mb-4">
+                            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                                </svg>
+                                Appearance
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between py-2">
+                                    <div>
+                                        <div class="font-medium">Theme</div>
+                                        <div class="text-sm text-muted-foreground">Choose light or dark mode</div>
+                                    </div>
+                                    <button id="settingsThemeToggle" class="toggle-switch" data-active="false"></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tracking Settings -->
+                        <div class="bg-card border border-border rounded-xl p-6 mb-4">
+                            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Tracking
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between py-2">
+                                    <div>
+                                        <div class="font-medium">Auto-start tracking</div>
+                                        <div class="text-sm text-muted-foreground">Start tracking when app launches</div>
+                                    </div>
+                                    <button id="autoStartToggle" class="toggle-switch active" data-active="true"></button>
+                                </div>
+                                <div class="flex items-center justify-between py-2">
+                                    <div>
+                                        <div class="font-medium">Minimize to tray</div>
+                                        <div class="text-sm text-muted-foreground">Keep running in system tray when closed</div>
+                                    </div>
+                                    <button id="minimizeToTrayToggle" class="toggle-switch active" data-active="true"></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Management -->
+                        <div class="bg-card border border-border rounded-xl p-6 mb-4">
+                            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                                </svg>
+                                Data Management
+                            </h3>
+                            
+                            <div class="bg-secondary/50 rounded-lg p-4 mb-4">
+                                <div class="text-sm font-medium mb-2">Storage Location</div>
+                                <code class="text-xs bg-background px-2 py-1 rounded">./data/tracking-YYYY-MM-DD.json</code>
+                                <div class="mt-3 grid grid-cols-2 gap-3 text-xs">
+                                    <div><span class="text-muted-foreground">Apps Tracked:</span> <span id="statsAppsCount" class="font-semibold">0</span></div>
+                                    <div><span class="text-muted-foreground">Sessions:</span> <span id="statsSessions" class="font-semibold">0</span></div>
+                                    <div><span class="text-muted-foreground">Last Saved:</span> <span id="statsLastSaved" class="font-semibold">Never</span></div>
+                                    <div><span class="text-muted-foreground">Auto-save:</span> <span class="font-semibold text-green-400">Active</span></div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <button id="saveNow" class="btn px-4 py-2.5 rounded-lg bg-accent text-black font-medium hover:bg-cyan-400 transition-colors">
+                                    💾 Save Now
+                                </button>
+                                <button id="openDataFolder" class="btn px-4 py-2.5 rounded-lg bg-secondary font-medium hover:bg-secondary/80">
+                                    📁 Open Folder
+                                </button>
+                                <button id="exportAllData" class="btn px-4 py-2.5 rounded-lg bg-secondary font-medium hover:bg-secondary/80">
+                                    📤 Export Data
+                                </button>
+                                <button id="importData" class="btn px-4 py-2.5 rounded-lg bg-secondary font-medium hover:bg-secondary/80">
+                                    📥 Import Data
+                                </button>
+                            </div>
+                            <button id="clearAllData" class="w-full mt-3 btn px-4 py-2.5 rounded-lg bg-red-900/50 text-red-300 font-medium hover:bg-red-900/70 border border-red-800">
+                                🗑️ Clear All Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- About View -->
+                <div id="aboutView" class="hidden h-full p-6 overflow-auto">
+                    <div class="max-w-3xl mx-auto">
+                        <div class="page-header mb-6 -mx-6 -mt-6 px-6 pt-6">
+                            <h2 class="page-title">About Ticklo</h2>
+                            <p class="page-subtitle">Your personal time tracking companion</p>
+                        </div>
+                        
+                        <!-- App Info -->
+                        <div class="bg-card border border-border rounded-xl p-8 mb-6 text-center">
+                            <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold mb-2">Ticklo</h3>
+                            <p class="text-muted-foreground mb-4">Version 2.0.0</p>
+                            <p class="text-sm text-muted-foreground max-w-md mx-auto">
+                                A beautiful, minimal time tracking application that helps you understand how you spend your time on your computer.
+                            </p>
+                        </div>
+
+                        <!-- Features -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="feature-card">
+                                <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center mb-3">
+                                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="font-semibold mb-1">Automatic Tracking</h4>
+                                <p class="text-sm text-muted-foreground">Automatically tracks your active applications without any manual input.</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3">
+                                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="font-semibold mb-1">Privacy First</h4>
+                                <p class="text-sm text-muted-foreground">All data stays on your machine. No cloud, no tracking, no accounts.</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center mb-3">
+                                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="font-semibold mb-1">Visual Timeline</h4>
+                                <p class="text-sm text-muted-foreground">Beautiful day and week views to visualize your activity patterns.</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center mb-3">
+                                    <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="font-semibold mb-1">Export & Import</h4>
+                                <p class="text-sm text-muted-foreground">Export your data to CSV or import from backups anytime.</p>
+                            </div>
+                        </div>
+
+                        <!-- Credits -->
+                        <div class="bg-card border border-border rounded-xl p-6 text-center">
+                            <p class="text-sm text-muted-foreground">Built with Electron, Tailwind CSS, and ❤️</p>
+                            <p class="text-xs text-muted-foreground mt-2">© 2025 Ticklo. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ View -->
+                <div id="faqView" class="hidden h-full p-6 overflow-auto">
+                    <div class="max-w-3xl mx-auto">
+                        <div class="page-header mb-6 -mx-6 -mt-6 px-6 pt-6">
+                            <h2 class="page-title">Frequently Asked Questions</h2>
+                            <p class="page-subtitle">Find answers to common questions</p>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div class="faq-item bg-card">
+                                <div class="faq-question">
+                                    <span>How does Ticklo track my time?</span>
+                                    <svg class="faq-chevron w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                                <div class="faq-answer">
+                                    Ticklo monitors your active window every second and records which application is in focus. It automatically groups continuous usage into sessions and calculates total time spent in each app.
+                                </div>
+                            </div>
+                            
+                            <div class="faq-item bg-card">
+                                <div class="faq-question">
+                                    <span>Is my data private and secure?</span>
+                                    <svg class="faq-chevron w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                                <div class="faq-answer">
+                                    Yes! All your tracking data is stored locally on your computer in the <code>./data</code> folder. Ticklo never sends any data to external servers. Your privacy is our priority.
+                                </div>
+                            </div>
+                            
+                            <div class="faq-item bg-card">
+                                <div class="faq-question">
+                                    <span>Can I export my tracking data?</span>
+                                    <svg class="faq-chevron w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                                <div class="faq-answer">
+                                    Absolutely! Go to Settings → Data Management and click "Export Data" to download your tracking history as a CSV file. You can also access the raw JSON files directly in the data folder.
+                                </div>
+                            </div>
+                            
+                            <div class="faq-item bg-card">
+                                <div class="faq-question">
+                                    <span>How do I pause tracking temporarily?</span>
+                                    <svg class="faq-chevron w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                                <div class="faq-answer">
+                                    Click the pause button in the header or use the system tray menu to pause/resume tracking. When paused, no activity will be recorded until you resume.
+                                </div>
+                            </div>
+                            
+                            <div class="faq-item bg-card">
+                                <div class="faq-question">
+                                    <span>What happens when I close the app?</span>
+                                    <svg class="faq-chevron w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                                <div class="faq-answer">
+                                    By default, Ticklo minimizes to the system tray when you close the window, continuing to track in the background. You can fully quit the app from the tray menu or disable this behavior in Settings.
+                                </div>
+                            </div>
+                            
+                            <div class="faq-item bg-card">
+                                <div class="faq-question">
+                                    <span>How far back can I view my history?</span>
+                                    <svg class="faq-chevron w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                                <div class="faq-answer">
+                                    Ticklo stores data for each day in separate files, so you can view your history as far back as you've been using the app. Use the date navigation arrows to browse through past days.
+                                </div>
+                            </div>
+                            
+                            <div class="faq-item bg-card">
+                                <div class="faq-question">
+                                    <span>Can I manually add activities?</span>
+                                    <svg class="faq-chevron w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                                <div class="faq-answer">
+                                    Yes! Click the "+" button in the timeline view to manually add an activity. This is useful for tracking offline work or activities that weren't automatically captured.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
-    <!-- Settings View -->
-    <div id="settingsView" class="hidden h-full p-6 overflow-auto">
-        <div class="max-w-3xl mx-auto">
-            <h2 class="text-2xl font-semibold mb-6">Settings</h2>
-            
-            <!-- Appearance Settings -->
-            <div class="bg-card border border-border rounded-lg p-6 mb-4">
-                <h3 class="text-lg font-semibold mb-4">Appearance</h3>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="font-medium">Theme</div>
-                            <div class="text-sm text-muted-foreground">Choose your preferred color scheme</div>
-                        </div>
-                        <button id="settingsThemeToggle" class="btn px-4 py-2 rounded bg-secondary">
-                            <span id="currentTheme">Dark</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tracking Settings -->
-            <div class="bg-card border border-border rounded-lg p-6 mb-4">
-                <h3 class="text-lg font-semibold mb-4">Tracking</h3>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="font-medium">Auto-start tracking</div>
-                            <div class="text-sm text-muted-foreground">Start tracking when app launches</div>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="autoStartToggle" class="sr-only peer" checked>
-                            <div class="w-11 h-6 bg-secondary rounded-full peer peer-checked:bg-accent"></div>
-                        </label>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="font-medium">Minimize to tray</div>
-                            <div class="text-sm text-muted-foreground">Keep app running in system tray</div>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="minimizeToTrayToggle" class="sr-only peer" checked>
-                            <div class="w-11 h-6 bg-secondary rounded-full peer peer-checked:bg-accent"></div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Data Management -->
-            <div class="bg-card border border-border rounded-lg p-6 mb-4">
-                <h3 class="text-lg font-semibold mb-4">Data Management</h3>
-                
-                <!-- Data Location Info -->
-                <div class="mb-4 p-3 bg-secondary rounded">
-                    <div class="text-sm font-medium mb-1">Data Storage Location</div>
-                    <div class="text-xs text-muted-foreground mb-2">
-                        All tracking data is saved locally in JSON format
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <code class="text-xs bg-background px-2 py-1 rounded flex-1">./data/tracking-YYYY-MM-DD.json</code>
-                        <button id="openDataFolder" class="btn px-3 py-1 rounded bg-accent text-xs">
-                            Open Folder
-                        </button>
-                    </div>
-                    <div class="text-xs text-muted-foreground mt-2">
-                        📁 Main data: <code>data/tracking-*.json</code><br>
-                        💾 Backups: <code>data/backups/tracking-*-backup-*.json</code><br>
-                        ⚙️ Settings: <code>data/settings.json</code>
-                    </div>
-                </div>
-                
-                <!-- Data Stats -->
-                <div class="mb-4 p-3 bg-secondary rounded">
-                    <div class="text-sm font-medium mb-2">Current Session</div>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                            <span class="text-muted-foreground">Apps Tracked:</span>
-                            <span id="statsAppsCount" class="ml-2 font-semibold">0</span>
-                        </div>
-                        <div>
-                            <span class="text-muted-foreground">Total Sessions:</span>
-                            <span id="statsSessions" class="ml-2 font-semibold">0</span>
-                        </div>
-                        <div>
-                            <span class="text-muted-foreground">Last Saved:</span>
-                            <span id="statsLastSaved" class="ml-2 font-semibold">Never</span>
-                        </div>
-                        <div>
-                            <span class="text-muted-foreground">Auto-save:</span>
-                            <span class="ml-2 font-semibold text-green-500">✓ Active</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="space-y-3">
-                    <button id="saveNow" class="w-full btn px-4 py-2 rounded bg-accent text-left">
-                        💾 Save Now
-                    </button>
-                    <button id="exportAllData" class="w-full btn px-4 py-2 rounded bg-secondary text-left">
-                        📤 Export All Data
-                    </button>
-                    <button id="importData" class="w-full btn px-4 py-2 rounded bg-secondary text-left">
-                        📥 Import Data
-                    </button>
-                    <button id="clearAllData" class="w-full btn px-4 py-2 rounded bg-red-900 text-red-100 text-left">
-                        🗑️ Clear All Data
-                    </button>
-                </div>
-            </div>
-
-            <!-- About -->
-            <div class="bg-card border border-border rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-4">About</h3>
-                <div class="space-y-2 text-sm text-muted-foreground">
-                    <p>Ticklo Activity Tracker v1.0.0</p>
-                    <p>A beautiful time tracking app for monitoring your daily workflow</p>
-                    <p class="pt-2">Built with Electron, Tailwind CSS, and ❤️</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- About View -->
-    <div id="aboutView" class="hidden h-full p-6">
-        <div class="max-w-3xl mx-auto">
-            <h2 class="text-2xl font-semibold mb-6">About Ticklo</h2>
-            <div class="bg-card border border-border rounded-lg p-6 space-y-4">
-                <p class="text-sm text-muted-foreground">
-                    Ticklo is a minimal time tracking application that helps you understand how you spend your time.
-                </p>
-                <div class="pt-4 border-t border-border">
-                    <p class="text-xs text-muted-foreground">Version 2.0.0</p>
-                    <p class="text-xs text-muted-foreground mt-1">Built with Electron</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- FAQ View -->
-    <div id="faqView" class="hidden h-full p-6">
-        <div class="max-w-3xl mx-auto">
-            <h2 class="text-2xl font-semibold mb-6">Frequently Asked Questions</h2>
-            <div class="bg-card border border-border rounded-lg p-6 space-y-6">
-                <div>
-                    <h3 class="font-semibold mb-2">How does Ticklo track my time?</h3>
-                    <p class="text-sm text-muted-foreground">Ticklo monitors your active windows and apps to
-                        automatically track your time.</p>
-                </div>
-                <div>
-                    <h3 class="font-semibold mb-2">Is my data private?</h3>
-                    <p class="text-sm text-muted-foreground">Yes, all tracking data is stored locally on your machine.
-                    </p>
-                </div>
-                <div>
-                    <h3 class="font-semibold mb-2">Can I export my data?</h3>
-                    <p class="text-sm text-muted-foreground">Export functionality will be added in a future update.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    </main>
-    </div>
-    </div>
+    <!-- Hidden date input for date picker -->
+    <input type="date" id="hiddenDatePicker" class="hidden" />
 
     <script src="renderer.js"></script>
 </body>
-
 </html>
